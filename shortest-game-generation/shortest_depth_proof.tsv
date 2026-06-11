@@ -1,0 +1,14 @@
+# Breadth-search proof table for the shortest terminal Togyzkumalak game.
+# Rows 1..10 have terminal_edges = 0, proving that no game can end before halfmove 11.
+# unique_nonterminal_after is intentionally not materialized at halfmove 10 because the next frontier is extremely large.
+halfmove	frontier_positions	legal_edges	avg_legal_moves	unique_nonterminal_after	terminal_edges	tuzdyk_none	tuzdyk_only_p1	tuzdyk_only_p2	tuzdyk_both
+1	1	9	9.000000	9	0	9	0	0	0
+2	9	73	8.111111	73	0	73	0	0	0
+3	73	613	8.397260	613	0	613	0	0	0
+4	613	5199	8.481240	5199	0	4934	0	265	0
+5	5199	43184	8.306213	42841	0	38675	2389	2080	40
+6	42841	357277	8.339605	350462	0	304840	18087	33259	1091
+7	350462	2924670	8.345184	2846239	0	2371318	288414	245150	19788
+8	2846239	23876487	8.388785	23068632	0	18502155	2116316	3012001	246015
+9	23068632	193199319	8.374979	185464053	0	144048551	24509770	21789072	2851926
+10	185464053	1559006339	8.405976	not_materialized	0	1121297406	176681476	232233978	28793479
