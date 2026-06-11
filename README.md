@@ -2,8 +2,11 @@
 
 *Read this in other languages: [English](README.md) | [Қазақша](README_kk.md) | [Русский](README_ru.md) | [Кыргызча](README_ky.md)*
 
+**🎮 [Play against the C++ WebAssembly Engine directly in your browser!](https://9qumalaq.vercel.app/)**
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![C++17](https://img.shields.io/badge/C++-17-blue.svg)](https://isocpp.org/)
+
 
 This repository contains the official, self-contained C++ source code for the paper:
 
