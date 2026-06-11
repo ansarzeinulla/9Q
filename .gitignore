@@ -9,3 +9,7 @@ billion-game-generation/*.o
 billion-game-generation/generate_billion_games
 shortest-game-generation/*.o
 shortest-game-generation/find_shortest_game
+*.o
+engine/togyzkumalak_engine
+billion-game-generation/generate_billion_games
+shortest-game-generation/find_shortest_game
