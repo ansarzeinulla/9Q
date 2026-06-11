@@ -1,5 +1,7 @@
 # Hand-Written Evaluation Engine
 
+*Read this in other languages: [English](README.md) | [Қазақша](README_kk.md) | [Русский](README_ru.md) | [Кыргызча](README_ky.md)*
+
 This folder contains the C++ Togyzkumalak rules engine and playable command-line engine.
 
 For the research package, the main required engine is the hand-written minimax engine:

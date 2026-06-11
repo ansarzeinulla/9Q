@@ -1,5 +1,7 @@
 # Shortest-Game Generation
 
+*Read this in other languages: [English](README.md) | [Қазақша](README_kk.md) | [Русский](README_ru.md) | [Кыргызча](README_ky.md)*
+
 This folder contains the shortest terminal-game search used for the paper's exhaustive early-game result.
 
 The paper reports that no terminal state exists before halfmove `11`, and gives one terminal line at halfmove `11` with final Kazan score `88-10` for White/P1.

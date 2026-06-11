@@ -1,5 +1,7 @@
 # Billion-Game Generation
 
+*Read this in other languages: [English](README.md) | [Қазақша](README_kk.md) | [Русский](README_ru.md) | [Кыргызча](README_ky.md)*
+
 This folder contains the random playout simulator used for the paper's empirical game-tree analysis.
 
 The paper reports:
