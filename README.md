@@ -61,6 +61,26 @@ cd ../engine
 ```
 *(For low-memory machines, use `ai2` or `ai3` instead of `ai4`).*
 
+## Browser / Vercel App
+
+The `web/` folder contains a static browser arena for the engine. It lets a user choose the White and Black controllers (`human`, `randombot`, `minimax`, or `dag4`) and set a separate per-move time budget for each side. The timer resets every move and all bot compute runs locally in the player's browser through WebAssembly.
+
+Install Emscripten locally, then build the Wasm artifacts:
+
+```bash
+npm run setup:emscripten
+npm run build:wasm
+```
+
+Then run or build the static app:
+
+```bash
+npm run dev
+npm run build
+```
+
+For Vercel, commit the generated `web/public/wasm/togyz_engine.js` and `web/public/wasm/togyz_engine.wasm` files. The included `vercel.json` uses `npm run build` and serves the `dist/` output directory.
+
 ## Full Reproduction Commands
 
 To fully reproduce the billion-game random simulation (Warning: highly compute-intensive):

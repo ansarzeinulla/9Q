@@ -1,0 +1,13 @@
+{
+  "name": "9q-browser-arena",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node web/scripts/serve.mjs",
+    "build": "node web/scripts/build-static.mjs",
+    "build:wasm": "bash web/scripts/build-wasm.sh",
+    "setup:emscripten": "bash web/scripts/setup-emscripten.sh",
+    "check": "npm run build"
+  }
+}

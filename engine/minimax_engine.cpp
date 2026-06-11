@@ -13,7 +13,15 @@ using Clock = std::chrono::steady_clock;
 // ---------------------------------------------------------
 // Transposition Table (Optimized Fixed-Size Vector)
 // ---------------------------------------------------------
-const int TT_SIZE = 1 << 24; // 16.7M entries ~ 400MB
+#ifndef MINIMAX_TT_BITS
+#ifdef __EMSCRIPTEN__
+#define MINIMAX_TT_BITS 20
+#else
+#define MINIMAX_TT_BITS 24
+#endif
+#endif
+
+const int TT_SIZE = 1 << MINIMAX_TT_BITS; // Native default: 16.7M entries.
 struct TTEntry {
     uint64_t hash = 0;
     uint64_t evaluator_key = 0;

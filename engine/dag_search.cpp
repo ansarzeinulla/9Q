@@ -2,6 +2,7 @@
 #include "position_hash.hpp"
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -11,6 +12,7 @@ namespace dag_search {
 
 namespace {
 
+using Clock = std::chrono::steady_clock;
 constexpr double SEARCH_INF = 10000000.0;
 
 #ifndef DAG_Q_DEPTH
@@ -158,8 +160,11 @@ class DagSearcher {
 public:
     explicit DagSearcher(size_t reserve_hint,
                          const std::unordered_map<uint64_t, int>& root_repetitions,
-                         const Evaluator& evaluator_ref)
-        : evaluator(evaluator_ref), repetitions(root_repetitions) {
+                         const Evaluator& evaluator_ref,
+                         const Clock::time_point* deadline_ref = nullptr,
+                         bool* timed_out_ref = nullptr)
+        : evaluator(evaluator_ref), deadline(deadline_ref),
+          timed_out(timed_out_ref), repetitions(root_repetitions) {
         table.reserve(reserve_hint);
     }
 
@@ -167,6 +172,10 @@ public:
                   std::array<int, 2>& tuzduks, int to_play, int steps,
                   int max_steps, int winner_code, int depth,
                   double alpha, double beta) {
+        if (deadline_reached()) {
+            return evaluate_leaf(board, kazans, tuzduks, to_play, winner_code,
+                                 winner_code != -2, evaluator);
+        }
         stats.nodes++;
 
         if (winner_code != -2) {
@@ -220,6 +229,7 @@ public:
 
         double best = -SEARCH_INF;
         for (int i = 0; i < count; ++i) {
+            if (deadline_reached()) break;
             int next_winner = -2;
             int next_to_play = 1 - to_play;
             bool terminal = false;
@@ -241,6 +251,12 @@ public:
                 child_value = search(board, kazans, tuzduks, next_to_play,
                                      next_steps, max_steps, next_winner,
                                      depth - 1, -beta, -alpha);
+            }
+            if (timed_out && *timed_out) {
+                board = board_backup;
+                kazans = kazans_backup;
+                tuzduks = tuzduks_backup;
+                break;
             }
             if (!terminal) {
                 leave_repetition(exact_hash(board, kazans, tuzduks, next_to_play));
@@ -290,6 +306,10 @@ public:
                    std::array<int, 2>& tuzduks, int to_play, int steps,
                    int max_steps, int winner_code, double alpha, double beta,
                    int q_depth) {
+        if (deadline_reached()) {
+            return evaluate_leaf(board, kazans, tuzduks, to_play, winner_code,
+                                 winner_code != -2, evaluator);
+        }
         stats.nodes++;
 
         if (winner_code != -2) {
@@ -326,6 +346,7 @@ public:
 
         double best = stand_pat;
         for (int i = 0; i < count; ++i) {
+            if (deadline_reached()) break;
             int next_winner = -2;
             int next_to_play = 1 - to_play;
             bool terminal = false;
@@ -353,6 +374,12 @@ public:
                     child_value = qsearch(board, kazans, tuzduks, next_to_play,
                                           next_steps, max_steps, next_winner,
                                           -beta, -alpha, q_depth - 1);
+                }
+                if (timed_out && *timed_out) {
+                    board = board_backup;
+                    kazans = kazans_backup;
+                    tuzduks = tuzduks_backup;
+                    break;
                 }
                 if (!terminal) {
                     leave_repetition(exact_hash(board, kazans, tuzduks,
@@ -384,8 +411,18 @@ public:
 
     std::unordered_map<NormalizedKey, TTEntry, KeyHash> table;
     const Evaluator& evaluator;
+    const Clock::time_point* deadline;
+    bool* timed_out;
     std::unordered_map<uint64_t, int> repetitions;
     SearchStats stats;
+
+    bool deadline_reached() {
+        if (!deadline || !timed_out) return false;
+        if (*timed_out) return true;
+        if (Clock::now() < *deadline) return false;
+        *timed_out = true;
+        return true;
+    }
 
     uint64_t exact_hash(const Bitboard& board, const std::array<int, 2>& kazans,
                         const std::array<int, 2>& tuzduks, int to_play) const {
@@ -427,15 +464,11 @@ size_t reserve_hint_for_depth(int depth) {
     return value;
 }
 
-} // namespace
-
-int get_best_move(const ToguzEnv& env, int depth) {
-    static const HeuristicEvaluator heuristic;
-    return get_best_move(env, depth, heuristic);
-}
-
-int get_best_move(const ToguzEnv& env, int depth, const Evaluator& evaluator) {
-    if (depth < 1) return -1;
+MoveEval search_root(const ToguzEnv& env, int depth, const Evaluator& evaluator,
+                     const Clock::time_point* deadline = nullptr,
+                     bool* timed_out = nullptr) {
+    MoveEval result;
+    if (depth < 1) return result;
 
     Bitboard board = env.board;
     auto kazans = env.kazans;
@@ -443,18 +476,20 @@ int get_best_move(const ToguzEnv& env, int depth, const Evaluator& evaluator) {
 
     std::array<int, 9> moves;
     int count = ToguzEnv::generate_moves_search(board, tuzduks, env.to_play, moves);
-    if (count == 0) return -1;
+    if (count == 0) return result;
 
     sort_moves(board, tuzduks, env.to_play, moves, count);
 
     DagSearcher searcher(reserve_hint_for_depth(depth), env.repetition_counts,
-                         evaluator);
+                         evaluator, deadline, timed_out);
     int best_move = moves[0];
     double best_value = -SEARCH_INF;
     double alpha = -SEARCH_INF;
     double beta = SEARCH_INF;
 
     for (int i = 0; i < count; ++i) {
+        if (timed_out && *timed_out) break;
+
         Bitboard b_tmp = board;
         auto k_tmp = kazans;
         auto t_tmp = tuzduks;
@@ -481,6 +516,7 @@ int get_best_move(const ToguzEnv& env, int depth, const Evaluator& evaluator) {
                                           next_winner, depth - 1,
                                           -beta, -alpha);
         }
+        if (timed_out && *timed_out) break;
         if (!terminal) {
             searcher.leave_repetition(searcher.exact_hash(
                 b_tmp, k_tmp, t_tmp, next_to_play));
@@ -500,7 +536,63 @@ int get_best_move(const ToguzEnv& env, int depth, const Evaluator& evaluator) {
 
     searcher.stats.table_entries = static_cast<uint64_t>(searcher.table.size());
     last_stats = searcher.stats;
-    return best_move;
+    result.move = best_move;
+    result.eval = best_value;
+    result.immediate_win = best_value >= WIN_SCORE;
+    result.forced_loss = best_value <= -WIN_SCORE;
+    return result;
+}
+
+} // namespace
+
+int get_best_move(const ToguzEnv& env, int depth) {
+    static const HeuristicEvaluator heuristic;
+    return get_best_move(env, depth, heuristic);
+}
+
+int get_best_move(const ToguzEnv& env, int depth, const Evaluator& evaluator) {
+    return search_root(env, depth, evaluator).move;
+}
+
+TimedMoveResult get_best_move_timed(const ToguzEnv& env, double seconds_per_move,
+                                    int max_depth) {
+    static const HeuristicEvaluator heuristic;
+    return get_best_move_timed(env, seconds_per_move, max_depth, heuristic);
+}
+
+TimedMoveResult get_best_move_timed(const ToguzEnv& env, double seconds_per_move,
+                                    int max_depth, const Evaluator& evaluator) {
+    TimedMoveResult best;
+    std::array<int, 9> moves;
+    auto board = env.board;
+    auto tuzduks = env.tuzduks;
+    int count = ToguzEnv::generate_moves_search(board, tuzduks, env.to_play, moves);
+    if (count <= 0 || max_depth < 1) return best;
+    sort_moves(board, tuzduks, env.to_play, moves, count);
+    best.move = moves[0];
+
+    seconds_per_move = std::clamp(seconds_per_move, 0.001, 30.0);
+    auto budget = std::chrono::duration_cast<Clock::duration>(
+        std::chrono::duration<double>(seconds_per_move));
+    Clock::time_point deadline = Clock::now() + budget;
+
+    for (int depth = 1; depth <= max_depth; ++depth) {
+        bool timed_out = false;
+        MoveEval current = search_root(env, depth, evaluator, &deadline, &timed_out);
+        if (timed_out || current.move < 0) {
+            best.timed_out = true;
+            break;
+        }
+        best.move = current.move;
+        best.eval = current.eval;
+        best.completed_depth = depth;
+        best.timed_out = false;
+        if (Clock::now() >= deadline) {
+            best.timed_out = true;
+            break;
+        }
+    }
+    return best;
 }
 
 std::vector<MoveEval> get_all_moves_with_evals(const ToguzEnv& env, int depth) {
