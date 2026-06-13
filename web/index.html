@@ -12,7 +12,6 @@
         <a class="wordmark" href="#setup">9Q</a>
         <div class="top-links">
           <a href="https://github.com/ansarzeinulla/9Q" target="_blank" rel="noreferrer">GitHub</a>
-          <a href="/togyzkumalak-pgn.html">PGN Viewer</a>
           <span class="muted-link" data-i18n="arxivSoon">arXiv soon</span>
           <label class="language-control" for="language-select">
             <select id="language-select" aria-label="Language">
@@ -63,9 +62,15 @@
             <textarea id="fen-input" rows="3" spellcheck="false"></textarea>
           </label>
 
+          <label class="pgn-box">
+            <span data-i18n="pgnInput">PGN (for analysis)</span>
+            <textarea id="pgn-input" rows="3" spellcheck="false" placeholder="e.g., 19 59 22+ 72x 15 55 33 73"></textarea>
+          </label>
+
           <div class="setup-actions">
             <button id="start-button" class="primary-button" type="button" disabled data-i18n="startGame">Start</button>
             <button id="initial-fen-button" type="button" data-i18n="initialFen">Initial FEN</button>
+            <button id="analyze-pgn-button" type="button" data-i18n="analyzePgn">Analyze PGN</button>
           </div>
 
           <p id="engine-status" class="engine-status" aria-live="polite"></p>

@@ -6,30 +6,9 @@
 
 .pgn-viewer-layout {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) 280px;
+  grid-template-columns: minmax(0, 1fr) 280px;
   gap: 20px;
   padding: 20px 0;
-}
-
-.pgn-input-section {
-  display: grid;
-  gap: 12px;
-}
-
-.pgn-input-section h2 {
-  font-size: 1.2rem;
-  margin: 0;
-}
-
-.pgn-input-section p {
-  color: var(--muted);
-  font-size: 0.9rem;
-  margin: 0;
-}
-
-.pgn-actions {
-  display: flex;
-  gap: 8px;
 }
 
 .board-section {

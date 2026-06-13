@@ -13,9 +13,6 @@ let engineReady = false;
 
 // DOM elements
 const els = {
-  pgnInput: document.getElementById('pgn-input'),
-  loadPgn: document.getElementById('load-pgn'),
-  clearPgn: document.getElementById('clear-pgn'),
   board: document.getElementById('board'),
   moveHistory: document.getElementById('move-history'),
   rotateBoard: document.getElementById('rotate-board'),
@@ -23,7 +20,6 @@ const els = {
   navPrev: document.getElementById('nav-prev'),
   navNext: document.getElementById('nav-next'),
   navLast: document.getElementById('nav-last'),
-  moveCounter: document.getElementById('move-counter'),
   turnLabel: document.getElementById('turn-label'),
   whiteKazan: document.getElementById('white-kazan'),
   blackKazan: document.getElementById('black-kazan')
@@ -171,7 +167,8 @@ function renderMoveHistory() {
     whiteMove.className = 'move-code';
     whiteMove.textContent = moveHistory[i] || '';
     whiteMove.dataset.index = i;
-    if (i === currentMoveIndex) whiteMove.classList.add('active');
+    // Highlight first move even at initial position
+    if (i === currentMoveIndex || (currentMoveIndex === -1 && i === 0)) whiteMove.classList.add('active');
     whiteMove.addEventListener('click', () => goToMove(i));
     row.appendChild(whiteMove);
     
@@ -191,8 +188,6 @@ function renderMoveHistory() {
 
 // Update game info
 function updateGameInfo() {
-  els.moveCounter.textContent = `Move: ${currentMoveIndex + 1}/${moveHistory.length}`;
-  
   if (currentPosition) {
     els.whiteKazan.textContent = currentPosition.kazans.white;
     els.blackKazan.textContent = currentPosition.kazans.black;
@@ -245,13 +240,13 @@ function goToLast() {
 }
 
 // Load PGN
-async function loadPgn() {
+async function loadPgn(pgnString) {
   if (!engineReady) {
     alert('Engine not ready yet. Please wait...');
     return;
   }
   
-  const pgn = els.pgnInput.value.trim();
+  const pgn = pgnString || localStorage.getItem('togyzkumalak_pgn') || '';
   if (!pgn) return;
   
   const moves = parsePgn(pgn);
@@ -300,30 +295,6 @@ async function loadPgn() {
   }
 }
 
-// Clear PGN
-async function clearPgn() {
-  els.pgnInput.value = '';
-  moveHistory = [];
-  currentMoveIndex = -1;
-  allPositions = [];
-  allFens = [];
-  
-  try {
-    if (engineReady) {
-      const resetPayload = await engine.send("reset");
-      allPositions.push(resetPayload.state);
-      allFens.push(resetPayload.fen);
-      currentPosition = resetPayload.state;
-    }
-  } catch (error) {
-    console.error(error);
-  }
-  
-  renderBoard();
-  renderMoveHistory();
-  updateGameInfo();
-}
-
 // Rotate board
 function rotateBoard() {
   isRotated = !isRotated;
@@ -341,11 +312,11 @@ function handleKeydown(event) {
       event.preventDefault();
       goToNext();
       break;
-    case 'ArrowDown':
+    case 'ArrowUp':
       event.preventDefault();
       goToFirst();
       break;
-    case 'ArrowUp':
+    case 'ArrowDown':
       event.preventDefault();
       goToLast();
       break;
@@ -353,8 +324,6 @@ function handleKeydown(event) {
 }
 
 // Event listeners
-els.loadPgn.addEventListener('click', loadPgn);
-els.clearPgn.addEventListener('click', clearPgn);
 els.rotateBoard.addEventListener('click', rotateBoard);
 els.navFirst.addEventListener('click', goToFirst);
 els.navPrev.addEventListener('click', goToPrev);
@@ -362,7 +331,7 @@ els.navNext.addEventListener('click', goToNext);
 els.navLast.addEventListener('click', goToLast);
 document.addEventListener('keydown', handleKeydown);
 
-// Initialize engine
+// Initialize engine and load PGN
 engine
   .send("init")
   .then((payload) => {
@@ -373,6 +342,9 @@ engine
     renderBoard();
     renderMoveHistory();
     updateGameInfo();
+    
+    // Load PGN from localStorage if available
+    loadPgn();
   })
   .catch((error) => {
     console.error("Engine initialization failed:", error);

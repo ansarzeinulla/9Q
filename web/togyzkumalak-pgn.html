@@ -18,24 +18,14 @@
       </nav>
 
       <section class="pgn-viewer-layout">
-        <div class="pgn-input-section">
-          <h2>PGN Input</h2>
-          <p>Paste your Togyzkumalak game in 9Q-PGN format (move parts only, without headings)</p>
-          <textarea id="pgn-input" rows="6" spellcheck="false" placeholder="e.g., 19 59 22+ 72x 15 55 33 73"></textarea>
-          <div class="pgn-actions">
-            <button id="load-pgn" class="primary-button">Load Game</button>
-            <button id="clear-pgn">Clear</button>
-          </div>
-        </div>
-
         <div class="board-section">
           <div class="board-controls">
-            <button id="rotate-board" title="Rotate Board">Rotate Board</button>
             <div class="navigation-controls">
-              <button id="nav-first" title="Go to beginning (Down arrow)">⏮</button>
+              <button id="nav-first" title="Go to beginning (Up arrow)">⏮</button>
               <button id="nav-prev" title="Previous move (Left arrow)">◀</button>
+              <button id="rotate-board" title="Rotate Board">🔄</button>
               <button id="nav-next" title="Next move (Right arrow)">▶</button>
-              <button id="nav-last" title="Go to end (Up arrow)">⏭</button>
+              <button id="nav-last" title="Go to end (Down arrow)">⏭</button>
             </div>
           </div>
           
@@ -46,10 +36,6 @@
           </div>
           
           <div id="board" class="board"></div>
-          
-          <div class="game-info">
-            <span id="move-counter">Move: 0/0</span>
-          </div>
         </div>
 
         <div class="move-history-section">

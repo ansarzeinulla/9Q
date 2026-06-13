@@ -18,8 +18,10 @@ const I18N = {
     timePerMove: "Time per move",
     noTimer: "No timer",
     fen: "FEN",
+    pgnInput: "PGN (for analysis)",
     startGame: "Start",
     initialFen: "Initial FEN",
+    analyzePgn: "Analyze PGN",
     formats: "Formats",
     fenTitle: "9Q-FEN",
     fenExplain: "FEN has five fields: white pits / black pits, kazans, tuzdyks, side to move, and half-move count.",
@@ -62,8 +64,10 @@ const I18N = {
     timePerMove: "Время на ход",
     noTimer: "Без таймера",
     fen: "FEN",
+    pgnInput: "PGN (для анализа)",
     startGame: "Начать",
     initialFen: "Начальный FEN",
+    analyzePgn: "Анализировать PGN",
     formats: "Форматы",
     fenTitle: "9Q-FEN",
     fenExplain: "FEN состоит из пяти полей: лунки начинающего / лунки отвечающего, казаны, туздыки, чей ход и счетчик полуходов.",
@@ -107,8 +111,10 @@ kk: {
     timePerMove: "Жүріс уақыты",
     noTimer: "Таймерсіз",
     fen: "FEN",
+    pgnInput: "PGN (талдау үшін)",
     startGame: "Бастау",
     initialFen: "Бастапқы FEN",
+    analyzePgn: "PGN талдау",
     formats: "Форматтар",
     fenTitle: "9Q-FEN",
     fenExplain: "FEN бес бөліктен тұрады: бастаушының отаулары / қостаушының отаулары, қазандар, тұздықтар, жүріс кезегі және жартылай жүріс санағышы.",
@@ -152,8 +158,10 @@ ky: {
     timePerMove: "Жүрүш убактысы",
     noTimer: "Таймерсиз",
     fen: "FEN",
+    pgnInput: "PGN (анализ үчүн)",
     startGame: "Баштоо",
     initialFen: "Баштапкы FEN",
+    analyzePgn: "PGN анализ",
     formats: "Форматтар",
     fenTitle: "9Q-FEN",
     fenExplain: "FEN беш бөлүктөн турат: баштоочунун үйлөрү / коштоочунун үйлөрү, казандар, туздар, жүрүү кезеги жана жарым жүрүштөрдүн эсептегичи.",
@@ -201,8 +209,10 @@ const els = {
   whiteTimeControl: document.querySelector("#white-time-control"),
   blackTimeControl: document.querySelector("#black-time-control"),
   fenInput: document.querySelector("#fen-input"),
+  pgnInput: document.querySelector("#pgn-input"),
   start: document.querySelector("#start-button"),
   initialFen: document.querySelector("#initial-fen-button"),
+  analyzePgn: document.querySelector("#analyze-pgn-button"),
   setup: document.querySelector("#setup-button"),
   downloadPgn: document.querySelector("#download-pgn-button"),
   whiteKazan: document.querySelector("#white-kazan"),
@@ -653,6 +663,16 @@ els.initialFen.addEventListener("click", () => {
   loadInitialFen().catch((error) => {
     setError(error);
   });
+});
+
+els.analyzePgn.addEventListener("click", () => {
+  const pgn = els.pgnInput.value.trim();
+  if (!pgn) {
+    setError(new Error("Please enter PGN moves"));
+    return;
+  }
+  localStorage.setItem('togyzkumalak_pgn', pgn);
+  window.location.href = '/togyzkumalak-pgn.html';
 });
 
 els.setup.addEventListener("click", backToSetup);
