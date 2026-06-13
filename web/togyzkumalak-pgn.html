@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Togyzkumalak PGN Viewer</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/togyzkumalak-pgn.css" />
+  </head>
+  <body>
+    <main class="pgn-viewer-page">
+      <nav class="topbar" aria-label="Navigation">
+        <a class="wordmark" href="/">9Q</a>
+        <div class="top-links">
+          <span class="muted-link">Togyzkumalak PGN Viewer</span>
+          <a href="/">Back to Game</a>
+        </div>
+      </nav>
+
+      <section class="pgn-viewer-layout">
+        <div class="pgn-input-section">
+          <h2>PGN Input</h2>
+          <p>Paste your Togyzkumalak game in 9Q-PGN format (move parts only, without headings)</p>
+          <textarea id="pgn-input" rows="6" spellcheck="false" placeholder="e.g., 19 59 22+ 72x 15 55 33 73"></textarea>
+          <div class="pgn-actions">
+            <button id="load-pgn" class="primary-button">Load Game</button>
+            <button id="clear-pgn">Clear</button>
+          </div>
+        </div>
+
+        <div class="board-section">
+          <div class="board-controls">
+            <button id="rotate-board" title="Rotate Board">Rotate Board</button>
+            <div class="navigation-controls">
+              <button id="nav-first" title="Go to beginning (Down arrow)">⏮</button>
+              <button id="nav-prev" title="Previous move (Left arrow)">◀</button>
+              <button id="nav-next" title="Next move (Right arrow)">▶</button>
+              <button id="nav-last" title="Go to end (Up arrow)">⏭</button>
+            </div>
+          </div>
+          
+          <div class="scoreline">
+            <span><span class="side-label">Beginner</span> <strong id="white-kazan">0</strong></span>
+            <span id="turn-label"></span>
+            <span><span class="side-label">Follower</span> <strong id="black-kazan">0</strong></span>
+          </div>
+          
+          <div id="board" class="board"></div>
+          
+          <div class="game-info">
+            <span id="move-counter">Move: 0/0</span>
+          </div>
+        </div>
+
+        <div class="move-history-section">
+          <h2>Move History</h2>
+          <p>Click on any move to jump to that position</p>
+          <div id="move-history" class="move-history"></div>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="/togyzkumalak-pgn.js"></script>
+  </body>
+</html>
