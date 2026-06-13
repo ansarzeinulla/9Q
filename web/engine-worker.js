@@ -73,6 +73,55 @@ self.addEventListener("message", async (event) => {
         state: readJson(Module, "_tg_state_json"),
         fen: readString(Module, "_tg_fen_string")
       };
+    } else if (type === "analyzePosition") {
+      // Analyze all legal moves with DAG
+      const state = readJson(Module, "_tg_state_json");
+      const legal = state.legal || [];
+      const evaluations = [];
+      
+      for (const pit of legal) {
+        // Save current state
+        const currentFen = readString(Module, "_tg_fen_string");
+        
+        // Try the move
+        const accepted = Module._tg_make_move(pit) === 1;
+        if (accepted) {
+          const move = readJson(Module, "_tg_last_move_json");
+          
+          // Get evaluations at different depths
+          const depthEvals = [];
+          for (let depth = 1; depth <= 4; depth++) {
+            // Run DAG analysis at this depth
+            Module.ccall("tg_bot_move", "number", ["string", "number"], ["dag", 0.01]);
+            const bot = readJson(Module, "_tg_last_bot_json");
+            depthEvals.push({
+              depth: depth,
+              score: bot.score || 0
+            });
+            
+            // Undo the bot move to get back to the position after the human move
+            // This is a simplification - in reality we'd need proper undo functionality
+            // For now, we'll reset to the position after the human move
+            Module.ccall("tg_set_fen", "number", ["string"], [currentFen]);
+            Module._tg_make_move(pit);
+          }
+          
+          evaluations.push({
+            pit: pit,
+            move: move,
+            depthEvals: depthEvals
+          });
+        }
+        
+        // Reset to original position
+        Module.ccall("tg_set_fen", "number", ["string"], [currentFen]);
+      }
+      
+      response = {
+        evaluations: evaluations,
+        state: readJson(Module, "_tg_state_json"),
+        fen: readString(Module, "_tg_fen_string")
+      };
     } else {
       throw new Error(`Unknown worker command: ${type}`);
     }

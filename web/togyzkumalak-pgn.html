@@ -27,6 +27,12 @@
               <button id="nav-next" title="Next move (Right arrow)">▶</button>
               <button id="nav-last" title="Go to end (Down arrow)">⏭</button>
             </div>
+            <div class="analysis-controls">
+              <label class="toggle-switch">
+                <input type="checkbox" id="dag-toggle" />
+                <span class="toggle-label">DAG Analysis</span>
+              </label>
+            </div>
           </div>
           
           <div class="scoreline">
@@ -36,6 +42,8 @@
           </div>
           
           <div id="board" class="board"></div>
+          
+          <div id="evaluations" class="evaluations"></div>
         </div>
 
         <div class="move-history-section">

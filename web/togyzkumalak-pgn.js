@@ -10,16 +10,20 @@ let isRotated = false;
 let allPositions = [];
 let allFens = [INITIAL_FEN];
 let engineReady = false;
+let dagEnabled = false;
+let currentEvaluations = [];
 
 // DOM elements
 const els = {
   board: document.getElementById('board'),
   moveHistory: document.getElementById('move-history'),
+  evaluations: document.getElementById('evaluations'),
   rotateBoard: document.getElementById('rotate-board'),
   navFirst: document.getElementById('nav-first'),
   navPrev: document.getElementById('nav-prev'),
   navNext: document.getElementById('nav-next'),
   navLast: document.getElementById('nav-last'),
+  dagToggle: document.getElementById('dag-toggle'),
   turnLabel: document.getElementById('turn-label'),
   whiteKazan: document.getElementById('white-kazan'),
   blackKazan: document.getElementById('black-kazan')
@@ -114,7 +118,7 @@ function renderPit(side, pit, count, displayNumber, blocked) {
     : `${side} pit ${displayNumber}, ${count} stones`;
 
   return `
-    <div class="${classes}" aria-label="${label}">
+    <div class="${classes}" data-side="${side}" data-pit="${pit}" aria-label="${label}">
       <span class="pit-label">${displayNumber}</span>
       <span class="stone-field" aria-hidden="true">${renderStoneField(count, blocked)}</span>
       <span class="pit-count">${blocked ? "" : count}</span>
@@ -147,6 +151,15 @@ function renderBoard() {
       <div class="pit-row white-row">${whitePits.join("")}</div>
     `;
   }
+  
+  // Add click handlers for hand play
+  document.querySelectorAll('.pit').forEach(pit => {
+    pit.addEventListener('click', () => {
+      const side = pit.dataset.side;
+      const pitIndex = parseInt(pit.dataset.pit);
+      handlePitClick(side, pitIndex);
+    });
+  });
 }
 
 // Render move history
@@ -220,6 +233,182 @@ function goToMove(index) {
   renderBoard();
   renderMoveHistory();
   updateGameInfo();
+  
+  if (dagEnabled) {
+    runDagAnalysis();
+  }
+}
+
+// Handle pit click for hand play
+async function handlePitClick(side, pit) {
+  if (!engineReady) return;
+  if (!currentPosition) return;
+  
+  // Check if it's the correct side's turn
+  const sideToPlay = currentPosition.toPlay;
+  if ((side === 'white' && sideToPlay !== 'white') || (side === 'black' && sideToPlay !== 'black')) {
+    return; // Not this side's turn
+  }
+  
+  // Check if pit is blocked (tuzdyk)
+  const tuzdyk = side === 'white' ? currentPosition.tuzdyks.black : currentPosition.tuzdyks.white;
+  if (pit === tuzdyk) return; // Tuzdyk cells are blocked
+  
+  // Try to make the move
+  const payload = await engine.send("humanMove", { pit });
+  if (!payload.accepted) return;
+  
+  // Get the move notation
+  const move = payload.move;
+  const notation = formatMoveNotation(move, side);
+  
+  // Handle history override/extend/shorten
+  if (currentMoveIndex === moveHistory.length - 1) {
+    // Extending history - just add the move
+    moveHistory.push(notation);
+    allPositions.push(payload.state);
+    allFens.push(payload.fen);
+    currentMoveIndex++;
+  } else if (currentMoveIndex < moveHistory.length - 1) {
+    // Overriding history - truncate and extend
+    const newHistory = moveHistory.slice(0, currentMoveIndex + 1);
+    newHistory.push(notation);
+    moveHistory = newHistory;
+    
+    const newPositions = allPositions.slice(0, currentMoveIndex + 2);
+    newPositions.push(payload.state);
+    allPositions = newPositions;
+    
+    const newFens = allFens.slice(0, currentMoveIndex + 2);
+    newFens.push(payload.fen);
+    allFens = newFens;
+    
+    currentMoveIndex++;
+  } else {
+    // Shouldn't happen, but handle gracefully
+    moveHistory.push(notation);
+    allPositions.push(payload.state);
+    allFens.push(payload.fen);
+    currentMoveIndex++;
+  }
+  
+  currentPosition = payload.state;
+  renderBoard();
+  renderMoveHistory();
+  updateGameInfo();
+  
+  if (dagEnabled) {
+    runDagAnalysis();
+  }
+}
+
+// Format move notation
+function formatMoveNotation(move, side) {
+  if (!move) return '';
+  const from = move.from + 1;
+  const to = move.to + 1;
+  let notation = `${from}${to}`;
+  if (move.capture) notation += '+';
+  if (move.tuzdyk) notation += 'x';
+  return notation;
+}
+
+// Calculate weighted average of evaluations
+function calculateWeightedAverage(depthEvals) {
+  if (!depthEvals || depthEvals.length === 0) return 0;
+  
+  const totalWeight = depthEvals.reduce((sum, e) => sum + e.depth, 0);
+  const weightedSum = depthEvals.reduce((sum, e) => sum + (e.score * e.depth), 0);
+  
+  return weightedSum / totalWeight;
+}
+
+// Run DAG analysis
+async function runDagAnalysis() {
+  if (!engineReady || !currentPosition) return;
+  
+  try {
+    const payload = await engine.send("analyzePosition");
+    currentEvaluations = payload.evaluations || [];
+    renderEvaluations();
+  } catch (error) {
+    console.error("DAG analysis failed:", error);
+    currentEvaluations = [];
+    renderEvaluations();
+  }
+}
+
+// Render evaluations
+function renderEvaluations() {
+  const container = els.evaluations;
+  container.innerHTML = '';
+  
+  if (!dagEnabled) {
+    container.style.display = 'none';
+    return;
+  }
+  
+  container.style.display = 'block';
+  
+  const title = document.createElement('div');
+  title.className = 'evaluations-title';
+  title.textContent = 'DAG Analysis';
+  container.appendChild(title);
+  
+  // Handle terminal positions
+  if (currentPosition.gameOver) {
+    const terminalMsg = document.createElement('div');
+    terminalMsg.className = 'evaluation-moves';
+    terminalMsg.textContent = currentPosition.winner === currentPosition.toPlay ? 'Winning position' : 'Losing position';
+    container.appendChild(terminalMsg);
+    return;
+  }
+  
+  if (currentEvaluations.length === 0) {
+    const noMovesMsg = document.createElement('div');
+    noMovesMsg.className = 'evaluation-moves';
+    noMovesMsg.textContent = 'No legal moves';
+    container.appendChild(noMovesMsg);
+    return;
+  }
+  
+  const movesContainer = document.createElement('div');
+  movesContainer.className = 'evaluation-moves';
+  
+  // Calculate final position evaluation (max of all legal move evaluations)
+  const finalEval = Math.max(...currentEvaluations.map(e => calculateWeightedAverage(e.depthEvals)));
+  
+  for (const evaluation of currentEvaluations) {
+    const weightedScore = calculateWeightedAverage(evaluation.depthEvals);
+    const notation = formatMoveNotation(evaluation.move, currentPosition.toPlay);
+    
+    // Mirror evaluation if board is rotated
+    const displayScore = isRotated ? -weightedScore : weightedScore;
+    
+    const moveEl = document.createElement('div');
+    moveEl.className = 'evaluation-move';
+    if (displayScore > 0) moveEl.classList.add('positive');
+    if (displayScore < 0) moveEl.classList.add('negative');
+    
+    moveEl.innerHTML = `
+      <span class="move-notation">${notation}</span>
+      <span class="move-score">${displayScore.toFixed(2)}</span>
+    `;
+    
+    moveEl.addEventListener('click', () => {
+      handleEvaluationClick(evaluation.pit);
+    });
+    
+    movesContainer.appendChild(moveEl);
+  }
+  
+  container.appendChild(movesContainer);
+}
+
+// Handle evaluation move click
+async function handleEvaluationClick(pit) {
+  const side = currentPosition.toPlay;
+  await handlePitClick(side, pit);
 }
 
 // Navigation functions
@@ -299,6 +488,11 @@ async function loadPgn(pgnString) {
 function rotateBoard() {
   isRotated = !isRotated;
   renderBoard();
+  
+  // Re-render evaluations to mirror scores if DAG is enabled
+  if (dagEnabled) {
+    renderEvaluations();
+  }
 }
 
 // Keyboard navigation
@@ -329,6 +523,14 @@ els.navFirst.addEventListener('click', goToFirst);
 els.navPrev.addEventListener('click', goToPrev);
 els.navNext.addEventListener('click', goToNext);
 els.navLast.addEventListener('click', goToLast);
+els.dagToggle.addEventListener('change', () => {
+  dagEnabled = els.dagToggle.checked;
+  if (dagEnabled) {
+    runDagAnalysis();
+  } else {
+    els.evaluations.style.display = 'none';
+  }
+});
 document.addEventListener('keydown', handleKeydown);
 
 // Initialize engine and load PGN
