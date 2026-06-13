@@ -13,6 +13,8 @@ let engineReady = false;
 let dagEnabled = false;
 let currentEvaluations = [];
 let syncPromise = Promise.resolve();
+let dagTimer = null;
+let currentAnalysisGen = 0;
 
 // DOM elements
 const els = {
@@ -221,10 +223,13 @@ function updateGameInfo() {
 }
 
 // Go to specific move
-// Go to specific move
 function goToMove(index) {
   if (!engineReady) return;
   if (index < -1 || index >= moveHistory.length) return;
+  
+  // 1) Stop analysis and bounce generation instantly to kill lag
+  currentAnalysisGen++;
+  clearTimeout(dagTimer);
   
   currentMoveIndex = index;
   if (index === -1) {
@@ -233,18 +238,15 @@ function goToMove(index) {
     currentPosition = allPositions[index + 1];
   }
   
-  // 1) Render UI immediately for a responsive feel
   renderBoard();
   renderMoveHistory();
   updateGameInfo();
   
-  // 2) Queue engine synchronization so it correctly matches the UI timeline
   syncPromise = syncPromise.then(async () => {
     try {
       const targetFen = allFens[index + 1];
       let synced = false;
       
-      // Try fast sync via FEN if supported by your engine
       if (targetFen) {
         try {
           await engine.send("setFen", { fen: targetFen });
@@ -257,7 +259,6 @@ function goToMove(index) {
         }
       }
       
-      // Fallback: Replay history up to current point to rebuild engine state natively
       if (!synced) {
         await engine.send("reset");
         for (let i = 0; i <= index; i++) {
@@ -271,10 +272,10 @@ function goToMove(index) {
       console.error("Failed to sync engine state:", error);
     }
     
-    // 3) Only trigger DAG if we are still actively on this move 
-    // (prevents lag/pileup if the user rapid-clicks navigation buttons)
+    // 2) DEBOUNCE the engine queue. Wait 200ms of user inactivity before analyzing
     if (dagEnabled && currentMoveIndex === index) {
-      runDagAnalysis();
+      clearTimeout(dagTimer);
+      dagTimer = setTimeout(runDagAnalysis, 200); 
     }
   }).catch(err => console.error(err));
 }
@@ -290,28 +291,37 @@ function handlePitClick(side, pit) {
   
   const tuzdyk = side === 'white' ? currentPosition.tuzdyks.black : currentPosition.tuzdyks.white;
   if (pit === tuzdyk) return;
+
+  // Bust lag and stop background tasks instantly on click
+  currentAnalysisGen++;
+  clearTimeout(dagTimer);
   
   syncPromise = syncPromise.then(async () => {
+    // Re-verify it is still our turn (in case of rapid clicks)
     if (currentPosition.toPlay !== sideToPlay) return;
+
+    // We MUST calculate notation BEFORE sending the move to the engine, 
+    // because notation depends on the board state prior to the stones moving
+    let notation = getMoveNotation(currentPosition, side, pit);
 
     const payload = await engine.send("humanMove", { pit });
     if (!payload.accepted) return;
     
-    // Calculate accurate notation natively based on rules
-    let notation = getMoveNotation(currentPosition, side, pit);
-    
-    // Handle history override/extend
+    // Handle history override/extend properly
     if (moveHistory.length === 0 || currentMoveIndex === -1) {
+      // Starting from beginning
       moveHistory = [notation];
       allPositions = [allPositions[0], payload.state];
       allFens = [allFens[0], payload.fen];
       currentMoveIndex = 0;
     } else if (currentMoveIndex === moveHistory.length - 1) {
+      // Adding to the very end of current history
       moveHistory.push(notation);
       allPositions.push(payload.state);
       allFens.push(payload.fen);
       currentMoveIndex++;
     } else if (currentMoveIndex < moveHistory.length - 1) {
+      // Overriding a past move: slice off the old "future" and start a new timeline
       moveHistory = moveHistory.slice(0, currentMoveIndex + 1);
       allPositions = allPositions.slice(0, currentMoveIndex + 2);
       allFens = allFens.slice(0, currentMoveIndex + 2);
@@ -327,8 +337,10 @@ function handlePitClick(side, pit) {
     renderMoveHistory();
     updateGameInfo();
     
+    // Debounce the DAG analysis so it doesn't lag the UI
     if (dagEnabled) {
-      runDagAnalysis();
+      clearTimeout(dagTimer);
+      dagTimer = setTimeout(runDagAnalysis, 200); 
     }
   }).catch(err => console.error(err));
 }
@@ -394,26 +406,33 @@ function calculateWeightedAverage(depthEvals) {
 
 // Run DAG analysis
 async function runDagAnalysis() {
-  if (!engineReady || !currentPosition) return;
+  if (!engineReady || !currentPosition || !dagEnabled) return;
+  
+  // Lock this request to the current UI generation
+  const generation = currentAnalysisGen;
   
   try {
     const payload = await engine.send("analyzePosition");
+    
+    // Drop results if the user already clicked away to another move
+    if (generation !== currentAnalysisGen) return;
+    
     currentEvaluations = payload.evaluations || [];
     renderEvaluations();
     
-    // If DAG is enabled, run analysis continuously
+    // Loop the polling, securely bound to the current generation
     if (dagEnabled && !currentPosition.gameOver) {
-      // Schedule next analysis after 1 second
-      setTimeout(() => {
-        if (dagEnabled && currentPosition === allPositions[currentMoveIndex + 1]) {
-          runDagAnalysis();
-        }
+      clearTimeout(dagTimer);
+      dagTimer = setTimeout(() => {
+        if (generation === currentAnalysisGen) runDagAnalysis();
       }, 1000);
     }
   } catch (error) {
-    console.error("DAG analysis failed:", error);
-    currentEvaluations = [];
-    renderEvaluations();
+    if (generation === currentAnalysisGen) {
+      console.error("DAG analysis failed:", error);
+      currentEvaluations = [];
+      renderEvaluations();
+    }
   }
 }
 
@@ -445,7 +464,7 @@ function renderEvaluations() {
   if (currentEvaluations.length === 0) {
     const noMovesMsg = document.createElement('div');
     noMovesMsg.className = 'evaluation-moves';
-    noMovesMsg.textContent = 'No legal moves';
+    noMovesMsg.textContent = 'Analyzing...';
     container.appendChild(noMovesMsg);
     return;
   }
@@ -453,24 +472,38 @@ function renderEvaluations() {
   const movesContainer = document.createElement('div');
   movesContainer.className = 'evaluation-moves';
   
-  for (const evaluation of currentEvaluations) {
-    const weightedScore = calculateWeightedAverage(evaluation.depthEvals);
+  const isWhiteToPlay = currentPosition.toPlay === 'white';
+
+  // 1) Assign calculated scores for sorting
+  const evaluatedMoves = currentEvaluations.map(ev => ({
+    ...ev,
+    calculatedScore: calculateWeightedAverage(ev.depthEvals)
+  }));
+
+  // 2) Sort logically: White searches for MAX, Black searches for MIN
+  evaluatedMoves.sort((a, b) => {
+    return isWhiteToPlay 
+      ? b.calculatedScore - a.calculatedScore // Descending for White
+      : a.calculatedScore - b.calculatedScore; // Ascending for Black
+  });
+  
+  for (const evaluation of evaluatedMoves) {
+    const rawScore = evaluation.calculatedScore;
+    const safeScore = typeof rawScore === 'number' && !isNaN(rawScore) ? rawScore : 0;
     
-    // Safely extract pit index and calculate real notation
     const pit = evaluation.pit !== undefined ? evaluation.pit : evaluation.move;
     const safeNotation = getMoveNotation(currentPosition, currentPosition.toPlay, pit);
     
-    const displayScore = isRotated ? -weightedScore : weightedScore;
-    const safeScore = typeof displayScore === 'number' && !isNaN(displayScore) ? displayScore : 0;
-    
     const moveEl = document.createElement('div');
     moveEl.className = 'evaluation-move';
-    if (safeScore > 0) moveEl.classList.add('positive');
-    if (safeScore < 0) moveEl.classList.add('negative');
+    
+    // Highlight based on current player perspective
+    if (safeScore > 0.3) moveEl.classList.add(isWhiteToPlay ? 'positive' : 'negative');
+    if (safeScore < -0.3) moveEl.classList.add(isWhiteToPlay ? 'negative' : 'positive');
     
     moveEl.innerHTML = `
       <span class="move-notation">${safeNotation}</span>
-      <span class="move-score">${safeScore.toFixed(2)}</span>
+      <span class="move-score">${safeScore > 0 ? '+' : ''}${safeScore.toFixed(2)}</span>
     `;
     
     movesContainer.appendChild(moveEl);
@@ -604,8 +637,10 @@ els.navLast.addEventListener('click', goToLast);
 els.dagToggle.addEventListener('change', () => {
   dagEnabled = els.dagToggle.checked;
   if (dagEnabled) {
+    currentAnalysisGen++;
     runDagAnalysis();
   } else {
+    clearTimeout(dagTimer);
     els.evaluations.style.display = 'none';
   }
 });
