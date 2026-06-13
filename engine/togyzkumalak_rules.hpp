@@ -12,12 +12,18 @@
 typedef __int128_t uint128;
 
 constexpr int NUM_PITS = 9;
+constexpr int BOARD_PITS = NUM_PITS * 2;
 constexpr int INITIAL_STONES = 9;
 constexpr int TOTAL_STONES = 162;
 constexpr int WIN_THRESHOLD = 82;
 
 constexpr int PLAYER_1 = 0;
 constexpr int PLAYER_2 = 1;
+
+constexpr int landing_pit(int start, int stones) {
+    return (stones == 1) ? (start + 1) % BOARD_PITS
+                         : (start + stones - 1) % BOARD_PITS;
+}
 
 struct Bitboard {
     uint128 side1 = 0; // P1 pits (0-8), 8 bits each

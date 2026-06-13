@@ -107,7 +107,7 @@ int move_order_key(const Bitboard& board, const std::array<int, 2>& tuzduks,
     int stones = board.get(start);
     if (stones <= 0) return 100;
 
-    int last = (stones == 1) ? ((start + 1) % 18) : ((start + stones - 1) % 18);
+    int last = landing_pit(start, stones);
     if (last / NUM_PITS == opponent) {
         int col = last % NUM_PITS;
         int val_after = board.get(last) + 1;

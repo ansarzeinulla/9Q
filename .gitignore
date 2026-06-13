@@ -2,6 +2,8 @@
 .vercel/
 .emsdk/
 dist/
+limit.txt
+tests/rules_test
 
 engine/*.o
 engine/togyzkumalak_engine

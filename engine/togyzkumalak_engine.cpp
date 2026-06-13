@@ -257,25 +257,11 @@ TimedBotResult timed_bot_move(ToguzEnv &env, const string &kind,
     result.eval = search.eval;
     return result;
   } else if (kind == "dag") {
-    std::array<int, 9> moves;
-    int count = ToguzEnv::generate_moves_search(env.board, env.tuzduks,
-                                                env.to_play, moves);
-    if (count == 0) return result;
-    minimax_engine::sort_moves_in_place(env.board, env.to_play, moves, count);
-    result.move = moves[0];
-
-    auto budget = chrono::duration<double>(move_time_seconds);
-    auto deadline = chrono::steady_clock::now() +
-                    chrono::duration_cast<chrono::steady_clock::duration>(budget);
-    for (int depth = 1; depth <= max_depth; ++depth) {
-      if (chrono::steady_clock::now() >= deadline)
-        break;
-      int candidate = dag_search::get_best_move(env, depth, evaluator);
-      if (candidate == -1)
-        break;
-      result.move = candidate;
-      result.completed_depth = depth;
-    }
+    auto search = dag_search::get_best_move_timed(
+        env, move_time_seconds, max_depth, evaluator);
+    result.move = search.move;
+    result.completed_depth = search.completed_depth;
+    result.eval = search.eval;
     return result;
   } else {
     throw runtime_error("Unsupported bot kind: " + kind);

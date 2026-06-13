@@ -7,21 +7,22 @@
 static uint128 SOW_MASKS[18][2][163];
 
 static void init_sow_masks() {
-    static bool initialized = false;
-    if (initialized) return;
-    for (int start = 0; start < 18; ++start) {
-        for (int count = 0; count < 163; ++count) {
-            uint128 m1 = 0, m2 = 0;
-            for (int i = 0; i < count; ++i) {
-                int pit = (start + i) % 18;
-                if (pit < 9) m1 += (uint128(1) << (pit * 8));
-                else m2 += (uint128(1) << ((pit - 9) * 8));
+    static const bool initialized = [] {
+        for (int start = 0; start < 18; ++start) {
+            for (int count = 0; count < 163; ++count) {
+                uint128 m1 = 0, m2 = 0;
+                for (int i = 0; i < count; ++i) {
+                    int pit = (start + i) % 18;
+                    if (pit < 9) m1 += (uint128(1) << (pit * 8));
+                    else m2 += (uint128(1) << ((pit - 9) * 8));
+                }
+                SOW_MASKS[start][0][count] = m1;
+                SOW_MASKS[start][1][count] = m2;
             }
-            SOW_MASKS[start][0][count] = m1;
-            SOW_MASKS[start][1][count] = m2;
         }
-    }
-    initialized = true;
+        return true;
+    }();
+    (void)initialized;
 }
 
 ToguzEnv::ToguzEnv() {
@@ -53,7 +54,7 @@ void ToguzEnv::step(int action) {
 
     if (stones == 1) {
         board.set(start, 0);
-        int target = (start + 1) % 18;
+        int target = landing_pit(start, stones);
         board.set(target, board.get(target) + 1);
         for (int i = 0; i < 2; ++i) if (tuzduks[i] != -1) {
             int tp = (1 - i) * 9 + tuzduks[i];
@@ -82,7 +83,7 @@ void ToguzEnv::step(int action) {
             if (s > 0) { kazans[i] += s; board.set(tp, 0); }
         }
         
-        int last = (start + sc) % 18;
+        int last = landing_pit(start, stones);
         int r = last / 9, c = last % 9;
         if (r == opp) {
             int val = board.get(last);
@@ -182,7 +183,7 @@ void ToguzEnv::step_search(Bitboard& b, std::array<int, 2>& k, std::array<int, 2
         b.set(start, 0);
         hash ^= (p == 0 ? Zobrist::board_p1[action][0] : Zobrist::board_p2[action][0]);
 
-        int tgt = (start + 1) % 18;
+        int tgt = landing_pit(start, stones);
         int old = b.get(tgt);
         hash ^= (tgt < 9 ? Zobrist::board_p1[tgt][old] : Zobrist::board_p2[tgt-9][old]);
         b.set(tgt, old + 1);
@@ -244,7 +245,7 @@ void ToguzEnv::step_search(Bitboard& b, std::array<int, 2>& k, std::array<int, 2
             }
         }
 
-        int last = (start + sc) % 18;
+        int last = landing_pit(start, stones);
         if (last / 9 == opp) {
             int val = b.get(last); int col = last % 9;
             if (val == 3 && t[p] == -1 && col != 8 && t[opp] != col) {
@@ -266,7 +267,22 @@ void ToguzEnv::step_search(Bitboard& b, std::array<int, 2>& k, std::array<int, 2
         bool ok = false; int no = 1 - n_play;
         for (int i=0; i<9; ++i) if (b.get(n_play*9+i) > 0 && t[no] != i) { ok = true; break; }
         if (!ok) {
-            for (int i=0; i<9; ++i) { k[0]+=b.get(i); k[1]+=b.get(i+9); b.set(i,0); b.set(i+9,0); }
+            for (int i=0; i<9; ++i) {
+                int p1_stones = b.get(i);
+                if (p1_stones > 0) {
+                    k[0] += p1_stones;
+                    hash ^= Zobrist::board_p1[i][p1_stones];
+                    b.set(i, 0);
+                    hash ^= Zobrist::board_p1[i][0];
+                }
+                int p2_stones = b.get(i+9);
+                if (p2_stones > 0) {
+                    k[1] += p2_stones;
+                    hash ^= Zobrist::board_p2[i][p2_stones];
+                    b.set(i+9, 0);
+                    hash ^= Zobrist::board_p2[i][0];
+                }
+            }
             if (k[0]>k[1]) wc=0; else if (k[1]>k[0]) wc=1; else wc=-1; term=true;
         }
     }

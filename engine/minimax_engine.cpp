@@ -29,7 +29,11 @@ struct TTEntry {
     int depth = -1;
     int perspective = -1;
 };
-static std::vector<TTEntry> TT(TT_SIZE);
+
+static std::vector<TTEntry>& transposition_table() {
+    static std::vector<TTEntry> table(TT_SIZE);
+    return table;
+}
 
 bool deadline_reached(const Clock::time_point& deadline) {
     return Clock::now() >= deadline;
@@ -49,8 +53,10 @@ double evaluate_leaf(const Bitboard& board, const std::array<int, 2>& kazans,
 // ---------------------------------------------------------
 int move_order_key(const Bitboard& b, int player, int move) {
     int opponent = 1 - player;
-    int stones = b.get(player * 9 + move);
-    int target = (player * 9 + move + stones) % 18;
+    int start = player * NUM_PITS + move;
+    int stones = b.get(start);
+    if (stones <= 0) return 100;
+    int target = landing_pit(start, stones);
     
     // (1) Moves that capture stones (Highest Priority)
     if (target / 9 == opponent) {
@@ -170,11 +176,12 @@ double minimax_raw(Bitboard& board, std::array<int, 2>& kazans, std::array<int, 
     // TT Probe
     uint64_t evaluator_key = evaluator.cache_key();
     int tt_idx = current_hash & (TT_SIZE - 1);
-    if (TT[tt_idx].hash == current_hash &&
-        TT[tt_idx].evaluator_key == evaluator_key &&
-        TT[tt_idx].perspective == perspective_player &&
-        TT[tt_idx].depth >= depth) {
-        return TT[tt_idx].value;
+    auto& tt = transposition_table();
+    if (tt[tt_idx].hash == current_hash &&
+        tt[tt_idx].evaluator_key == evaluator_key &&
+        tt[tt_idx].perspective == perspective_player &&
+        tt[tt_idx].depth >= depth) {
+        return tt[tt_idx].value;
     }
 
     if (depth == 0) {
@@ -206,7 +213,7 @@ double minimax_raw(Bitboard& board, std::array<int, 2>& kazans, std::array<int, 
             if (value > alpha) alpha = value;
             if (beta <= alpha) break;
         }
-        TT[tt_idx] = {current_hash, evaluator_key, value, depth, perspective_player};
+        tt[tt_idx] = {current_hash, evaluator_key, value, depth, perspective_player};
         return value;
     } else {
         double value = 10000000.0;
@@ -219,7 +226,7 @@ double minimax_raw(Bitboard& board, std::array<int, 2>& kazans, std::array<int, 
             if (value < beta) beta = value;
             if (beta <= alpha) break;
         }
-        TT[tt_idx] = {current_hash, evaluator_key, value, depth, perspective_player};
+        tt[tt_idx] = {current_hash, evaluator_key, value, depth, perspective_player};
         return value;
     }
 }
@@ -359,11 +366,12 @@ double minimax_raw_timed(Bitboard& board, std::array<int, 2>& kazans,
 
     uint64_t evaluator_key = evaluator.cache_key();
     int tt_idx = current_hash & (TT_SIZE - 1);
-    if (TT[tt_idx].hash == current_hash &&
-        TT[tt_idx].evaluator_key == evaluator_key &&
-        TT[tt_idx].perspective == perspective_player &&
-        TT[tt_idx].depth >= depth) {
-        return TT[tt_idx].value;
+    auto& tt = transposition_table();
+    if (tt[tt_idx].hash == current_hash &&
+        tt[tt_idx].evaluator_key == evaluator_key &&
+        tt[tt_idx].perspective == perspective_player &&
+        tt[tt_idx].depth >= depth) {
+        return tt[tt_idx].value;
     }
 
     if (depth == 0) {
@@ -418,7 +426,7 @@ double minimax_raw_timed(Bitboard& board, std::array<int, 2>& kazans,
             if (beta <= alpha) break;
         }
         if (!timed_out) {
-            TT[tt_idx] = {current_hash, evaluator_key, value, depth,
+            tt[tt_idx] = {current_hash, evaluator_key, value, depth,
                           perspective_player};
         }
         return value;
@@ -453,7 +461,7 @@ double minimax_raw_timed(Bitboard& board, std::array<int, 2>& kazans,
         if (beta <= alpha) break;
     }
     if (!timed_out) {
-        TT[tt_idx] = {current_hash, evaluator_key, value, depth,
+        tt[tt_idx] = {current_hash, evaluator_key, value, depth,
                       perspective_player};
     }
     return value;

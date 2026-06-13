@@ -17,21 +17,22 @@ public:
     static uint64_t to_play[2];
 
     static void init() {
-        static bool initialized = false;
-        if (initialized) return;
-        std::mt19937_64 rng(1337);
-        for (int i = 0; i < 9; ++i) {
-            for (int s = 0; s < 256; ++s) {
-                board_p1[i][s] = rng();
-                board_p2[i][s] = rng();
+        static const bool initialized = [] {
+            std::mt19937_64 rng(1337);
+            for (int i = 0; i < 9; ++i) {
+                for (int s = 0; s < 256; ++s) {
+                    board_p1[i][s] = rng();
+                    board_p2[i][s] = rng();
+                }
             }
-        }
-        for (int p = 0; p < 2; ++p) {
-            for (int s = 0; s <= TOTAL_STONES; ++s) kazan[p][s] = rng();
-            for (int s = 0; s < 10; ++s) tuzduk[p][s] = rng();
-            to_play[p] = rng();
-        }
-        initialized = true;
+            for (int p = 0; p < 2; ++p) {
+                for (int s = 0; s <= TOTAL_STONES; ++s) kazan[p][s] = rng();
+                for (int s = 0; s < 10; ++s) tuzduk[p][s] = rng();
+                to_play[p] = rng();
+            }
+            return true;
+        }();
+        (void)initialized;
     }
 
     static uint64_t get_initial_hash_bitboard(const Bitboard& b, const std::array<int, 2>& k, const std::array<int, 2>& t, int turn) {

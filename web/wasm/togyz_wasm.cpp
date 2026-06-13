@@ -223,9 +223,7 @@ AppliedMove apply_move_with_record(int move) {
     record.mover = env.to_play;
     record.stones_before = env.board.get(record.mover * NUM_PITS + move);
     int start = record.mover * NUM_PITS + move;
-    int landing = (record.stones_before == 1)
-        ? (start + 1) % (NUM_PITS * 2)
-        : (start + record.stones_before - 1) % (NUM_PITS * 2);
+    int landing = landing_pit(start, record.stones_before);
     record.landing_pit = landing % NUM_PITS;
 
     int before_kazan = env.kazans[record.mover];
