@@ -76,10 +76,10 @@ self.addEventListener("message", async (event) => {
     } else if (type === "analyzePosition") {
       // Analyze all legal moves with DAG
       const state = readJson(Module, "_tg_state_json");
-      const legal = state.legal || [];
       const evaluations = [];
       
-      for (const pit of legal) {
+      // Try all 9 pits and let the engine tell us which are legal
+      for (let pit = 0; pit < 9; pit++) {
         // Save current state
         const currentFen = readString(Module, "_tg_fen_string");
         
@@ -92,11 +92,20 @@ self.addEventListener("message", async (event) => {
           const depthEvals = [];
           for (let depth = 1; depth <= 4; depth++) {
             // Run DAG analysis at this depth
-            Module.ccall("tg_bot_move", "number", ["string", "number"], ["dag", 0.01]);
+            Module.ccall("tg_bot_move", "number", ["string", "number"], ["dag", 0.1]);
             const bot = readJson(Module, "_tg_last_bot_json");
+            // Try to get the score from different possible fields
+            let score = 0;
+            if (typeof bot.score === 'number') {
+              score = bot.score;
+            } else if (typeof bot.eval === 'number') {
+              score = bot.eval;
+            } else if (typeof bot.value === 'number') {
+              score = bot.value;
+            }
             depthEvals.push({
               depth: depth,
-              score: bot.score || 0
+              score: score
             });
             
             // Undo the bot move to get back to the position after the human move

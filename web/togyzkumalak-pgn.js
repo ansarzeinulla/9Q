@@ -12,6 +12,7 @@ let allFens = [INITIAL_FEN];
 let engineReady = false;
 let dagEnabled = false;
 let currentEvaluations = [];
+let syncPromise = Promise.resolve();
 
 // DOM elements
 const els = {
@@ -220,7 +221,9 @@ function updateGameInfo() {
 }
 
 // Go to specific move
+// Go to specific move
 function goToMove(index) {
+  if (!engineReady) return;
   if (index < -1 || index >= moveHistory.length) return;
   
   currentMoveIndex = index;
@@ -230,86 +233,147 @@ function goToMove(index) {
     currentPosition = allPositions[index + 1];
   }
   
+  // 1) Render UI immediately for a responsive feel
   renderBoard();
   renderMoveHistory();
   updateGameInfo();
   
-  if (dagEnabled) {
-    runDagAnalysis();
-  }
+  // 2) Queue engine synchronization so it correctly matches the UI timeline
+  syncPromise = syncPromise.then(async () => {
+    try {
+      const targetFen = allFens[index + 1];
+      let synced = false;
+      
+      // Try fast sync via FEN if supported by your engine
+      if (targetFen) {
+        try {
+          await engine.send("setFen", { fen: targetFen });
+          synced = true;
+        } catch (e1) {
+          try {
+            await engine.send("loadFen", { fen: targetFen });
+            synced = true;
+          } catch (e2) {}
+        }
+      }
+      
+      // Fallback: Replay history up to current point to rebuild engine state natively
+      if (!synced) {
+        await engine.send("reset");
+        for (let i = 0; i <= index; i++) {
+          const move = parseMove(moveHistory[i]);
+          if (move) {
+            await engine.send("humanMove", { pit: move.from });
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to sync engine state:", error);
+    }
+    
+    // 3) Only trigger DAG if we are still actively on this move 
+    // (prevents lag/pileup if the user rapid-clicks navigation buttons)
+    if (dagEnabled && currentMoveIndex === index) {
+      runDagAnalysis();
+    }
+  }).catch(err => console.error(err));
 }
 
 // Handle pit click for hand play
-async function handlePitClick(side, pit) {
-  if (!engineReady) return;
-  if (!currentPosition) return;
+function handlePitClick(side, pit) {
+  if (!engineReady || !currentPosition) return;
   
-  // Check if it's the correct side's turn
   const sideToPlay = currentPosition.toPlay;
   if ((side === 'white' && sideToPlay !== 'white') || (side === 'black' && sideToPlay !== 'black')) {
-    return; // Not this side's turn
+    return;
   }
   
-  // Check if pit is blocked (tuzdyk)
   const tuzdyk = side === 'white' ? currentPosition.tuzdyks.black : currentPosition.tuzdyks.white;
-  if (pit === tuzdyk) return; // Tuzdyk cells are blocked
+  if (pit === tuzdyk) return;
   
-  // Try to make the move
-  const payload = await engine.send("humanMove", { pit });
-  if (!payload.accepted) return;
-  
-  // Get the move notation
-  const move = payload.move;
-  const notation = formatMoveNotation(move, side);
-  
-  // Handle history override/extend/shorten
-  if (currentMoveIndex === moveHistory.length - 1) {
-    // Extending history - just add the move
-    moveHistory.push(notation);
-    allPositions.push(payload.state);
-    allFens.push(payload.fen);
-    currentMoveIndex++;
-  } else if (currentMoveIndex < moveHistory.length - 1) {
-    // Overriding history - truncate and extend
-    const newHistory = moveHistory.slice(0, currentMoveIndex + 1);
-    newHistory.push(notation);
-    moveHistory = newHistory;
+  syncPromise = syncPromise.then(async () => {
+    if (currentPosition.toPlay !== sideToPlay) return;
+
+    const payload = await engine.send("humanMove", { pit });
+    if (!payload.accepted) return;
     
-    const newPositions = allPositions.slice(0, currentMoveIndex + 2);
-    newPositions.push(payload.state);
-    allPositions = newPositions;
+    // Calculate accurate notation natively based on rules
+    let notation = getMoveNotation(currentPosition, side, pit);
     
-    const newFens = allFens.slice(0, currentMoveIndex + 2);
-    newFens.push(payload.fen);
-    allFens = newFens;
+    // Handle history override/extend
+    if (moveHistory.length === 0 || currentMoveIndex === -1) {
+      moveHistory = [notation];
+      allPositions = [allPositions[0], payload.state];
+      allFens = [allFens[0], payload.fen];
+      currentMoveIndex = 0;
+    } else if (currentMoveIndex === moveHistory.length - 1) {
+      moveHistory.push(notation);
+      allPositions.push(payload.state);
+      allFens.push(payload.fen);
+      currentMoveIndex++;
+    } else if (currentMoveIndex < moveHistory.length - 1) {
+      moveHistory = moveHistory.slice(0, currentMoveIndex + 1);
+      allPositions = allPositions.slice(0, currentMoveIndex + 2);
+      allFens = allFens.slice(0, currentMoveIndex + 2);
+      
+      moveHistory.push(notation);
+      allPositions.push(payload.state);
+      allFens.push(payload.fen);
+      currentMoveIndex++;
+    }
     
-    currentMoveIndex++;
-  } else {
-    // Shouldn't happen, but handle gracefully
-    moveHistory.push(notation);
-    allPositions.push(payload.state);
-    allFens.push(payload.fen);
-    currentMoveIndex++;
-  }
-  
-  currentPosition = payload.state;
-  renderBoard();
-  renderMoveHistory();
-  updateGameInfo();
-  
-  if (dagEnabled) {
-    runDagAnalysis();
-  }
+    currentPosition = payload.state;
+    renderBoard();
+    renderMoveHistory();
+    updateGameInfo();
+    
+    if (dagEnabled) {
+      runDagAnalysis();
+    }
+  }).catch(err => console.error(err));
 }
 
 // Format move notation
-function formatMoveNotation(move, side) {
-  if (!move) return '';
-  const from = move.from + 1;
-  const to = move.to + 1;
-  let notation = `${from}${to}`;
-  if (move.capture) notation += '+';
-  if (move.tuzdyk) notation += 'x';
+// Calculate standard notation for a move directly from rules
+function getMoveNotation(state, side, pit) {
+  if (!state || !state.pits || !state.pits[side]) return `${pit + 1}?`;
+  
+  const count = state.pits[side][pit];
+  if (count === 0) return `${pit + 1}?`;
+  
+  const distance = count === 1 ? 1 : count - 1;
+  const absoluteStart = side === 'white' ? pit : pit + 9;
+  const absoluteEnd = (absoluteStart + distance) % 18;
+  
+  const endSide = absoluteEnd < 9 ? 'white' : 'black';
+  const endPit = absoluteEnd % 9;
+  
+  let notation = `${pit + 1}${endPit + 1}`;
+  
+  if (endSide !== side) {
+    const isWhiteTuzdyk = state.tuzdyks.white === endPit && endSide === 'black';
+    const isBlackTuzdyk = state.tuzdyks.black === endPit && endSide === 'white';
+    
+    if (!isWhiteTuzdyk && !isBlackTuzdyk) {
+      const newStones = state.pits[endSide][endPit] + 1;
+      
+      if (newStones === 3 && endPit !== 8) {
+        // Check if player already has a tuzdyk
+        const hasTuzdyk = state.tuzdyks[side] != null && state.tuzdyks[side] !== -1;
+        // Check symmetry rule
+        const opponent = side === 'white' ? 'black' : 'white';
+        const opponentTuzdyk = state.tuzdyks[opponent];
+        const isSymmetric = opponentTuzdyk === endPit;
+        
+        if (!hasTuzdyk && !isSymmetric) {
+          notation += 'x';
+        }
+      } else if (newStones % 2 === 0) {
+        notation += '+';
+      }
+    }
+  }
+  
   return notation;
 }
 
@@ -317,8 +381,13 @@ function formatMoveNotation(move, side) {
 function calculateWeightedAverage(depthEvals) {
   if (!depthEvals || depthEvals.length === 0) return 0;
   
-  const totalWeight = depthEvals.reduce((sum, e) => sum + e.depth, 0);
-  const weightedSum = depthEvals.reduce((sum, e) => sum + (e.score * e.depth), 0);
+  const validEvals = depthEvals.filter(e => typeof e.score === 'number' && !isNaN(e.score));
+  if (validEvals.length === 0) return 0;
+  
+  const totalWeight = validEvals.reduce((sum, e) => sum + e.depth, 0);
+  if (totalWeight === 0) return 0;
+  
+  const weightedSum = validEvals.reduce((sum, e) => sum + (e.score * e.depth), 0);
   
   return weightedSum / totalWeight;
 }
@@ -331,6 +400,16 @@ async function runDagAnalysis() {
     const payload = await engine.send("analyzePosition");
     currentEvaluations = payload.evaluations || [];
     renderEvaluations();
+    
+    // If DAG is enabled, run analysis continuously
+    if (dagEnabled && !currentPosition.gameOver) {
+      // Schedule next analysis after 1 second
+      setTimeout(() => {
+        if (dagEnabled && currentPosition === allPositions[currentMoveIndex + 1]) {
+          runDagAnalysis();
+        }
+      }, 1000);
+    }
   } catch (error) {
     console.error("DAG analysis failed:", error);
     currentEvaluations = [];
@@ -355,7 +434,6 @@ function renderEvaluations() {
   title.textContent = 'DAG Analysis';
   container.appendChild(title);
   
-  // Handle terminal positions
   if (currentPosition.gameOver) {
     const terminalMsg = document.createElement('div');
     terminalMsg.className = 'evaluation-moves';
@@ -375,40 +453,30 @@ function renderEvaluations() {
   const movesContainer = document.createElement('div');
   movesContainer.className = 'evaluation-moves';
   
-  // Calculate final position evaluation (max of all legal move evaluations)
-  const finalEval = Math.max(...currentEvaluations.map(e => calculateWeightedAverage(e.depthEvals)));
-  
   for (const evaluation of currentEvaluations) {
     const weightedScore = calculateWeightedAverage(evaluation.depthEvals);
-    const notation = formatMoveNotation(evaluation.move, currentPosition.toPlay);
     
-    // Mirror evaluation if board is rotated
+    // Safely extract pit index and calculate real notation
+    const pit = evaluation.pit !== undefined ? evaluation.pit : evaluation.move;
+    const safeNotation = getMoveNotation(currentPosition, currentPosition.toPlay, pit);
+    
     const displayScore = isRotated ? -weightedScore : weightedScore;
+    const safeScore = typeof displayScore === 'number' && !isNaN(displayScore) ? displayScore : 0;
     
     const moveEl = document.createElement('div');
     moveEl.className = 'evaluation-move';
-    if (displayScore > 0) moveEl.classList.add('positive');
-    if (displayScore < 0) moveEl.classList.add('negative');
+    if (safeScore > 0) moveEl.classList.add('positive');
+    if (safeScore < 0) moveEl.classList.add('negative');
     
     moveEl.innerHTML = `
-      <span class="move-notation">${notation}</span>
-      <span class="move-score">${displayScore.toFixed(2)}</span>
+      <span class="move-notation">${safeNotation}</span>
+      <span class="move-score">${safeScore.toFixed(2)}</span>
     `;
-    
-    moveEl.addEventListener('click', () => {
-      handleEvaluationClick(evaluation.pit);
-    });
     
     movesContainer.appendChild(moveEl);
   }
   
   container.appendChild(movesContainer);
-}
-
-// Handle evaluation move click
-async function handleEvaluationClick(pit) {
-  const side = currentPosition.toPlay;
-  await handlePitClick(side, pit);
 }
 
 // Navigation functions
@@ -429,7 +497,7 @@ function goToLast() {
 }
 
 // Load PGN
-async function loadPgn(pgnString) {
+function loadPgn(pgnString) {
   if (!engineReady) {
     alert('Engine not ready yet. Please wait...');
     return;
@@ -444,46 +512,56 @@ async function loadPgn(pgnString) {
     return;
   }
   
-  moveHistory = moves;
-  currentMoveIndex = -1;
-  allPositions = [];
-  allFens = [];
-  
-  try {
-    // Reset engine to initial position
-    const resetPayload = await engine.send("reset");
-    allPositions.push(resetPayload.state);
-    allFens.push(resetPayload.fen);
+  // Ensure parsing & loading happens safely in the queue
+  syncPromise = syncPromise.then(async () => {
+    moveHistory = moves;
+    currentMoveIndex = -1;
+    allPositions = [];
+    allFens = [];
     
-    // Apply each move
-    for (const moveStr of moves) {
-      const move = parseMove(moveStr);
-      if (!move) {
-        alert(`Invalid move: ${moveStr}`);
-        return;
+    try {
+      // 1) Reset engine and save initial state
+      const resetPayload = await engine.send("reset");
+      allPositions.push(resetPayload.state);
+      allFens.push(resetPayload.fen);
+      
+      // 2) Build states and FENs loop natively
+      for (const moveStr of moves) {
+        const move = parseMove(moveStr);
+        if (!move) {
+          alert(`Invalid move: ${moveStr}`);
+          return;
+        }
+        
+        const payload = await engine.send("humanMove", { pit: move.from });
+        if (!payload.accepted) {
+          alert(`Move not accepted: ${moveStr}`);
+          return;
+        }
+        
+        allPositions.push(payload.state);
+        allFens.push(payload.fen);
       }
       
-      const payload = await engine.send("humanMove", { pit: move.from });
-      if (!payload.accepted) {
-        alert(`Move not accepted: ${moveStr}`);
-        return;
-      }
+      // 3) Crucial fix: rewind engine back to the start state so it matches the UI visually
+      await engine.send("reset");
       
-      allPositions.push(payload.state);
-      allFens.push(payload.fen);
+      currentMoveIndex = -1;
+      currentPosition = allPositions[0];
+      
+      renderBoard();
+      renderMoveHistory();
+      updateGameInfo();
+      
+      if (dagEnabled) {
+        runDagAnalysis();
+      }
+    } catch (error) {
+      alert(`Error loading PGN: ${error.message}`);
+      console.error(error);
     }
-    
-    currentPosition = allPositions[0];
-    renderBoard();
-    renderMoveHistory();
-    updateGameInfo();
-    
-  } catch (error) {
-    alert(`Error loading PGN: ${error.message}`);
-    console.error(error);
-  }
+  }).catch(err => console.error(err));
 }
-
 // Rotate board
 function rotateBoard() {
   isRotated = !isRotated;
