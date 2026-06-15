@@ -5,17 +5,12 @@
     {
       "source": "/public/wasm/(.*)",
       "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=0, must-revalidate"
-        }
+        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
       ]
     }
   ],
   "rewrites": [
-    { 
-      "source": "/togyzkumalak-pgn", 
-      "destination": "/togyzkumalak-pgn.html" 
-    }
+    { "source": "/togyzkumalak-pgn", "destination": "/togyzkumalak-pgn.html" },
+    { "source": "/wasm/(.*)", "destination": "/public/wasm/$1" }
   ]
 }
