@@ -196,6 +196,13 @@ const PLAYER_KEYS = {
   dag4: "dag"
 };
 
+const STORAGE_KEYS = {
+  pgn: "togyzkumalak_pgn",
+  analysisMoveIndex: "togyzkumalak_analysis_move_index",
+  resumeFen: "togyzkumalak_resume_fen",
+  language: "togyzkumalak_language"
+};
+
 const els = {
   setupPage: document.querySelector("#setup-page"),
   gamePage: document.querySelector("#game-page"),
@@ -253,7 +260,8 @@ class EngineClient {
 }
 
 const engine = new EngineClient();
-let lang = "en";
+let lang = localStorage.getItem(STORAGE_KEYS.language) || "en";
+let pendingResumeFen = localStorage.getItem(STORAGE_KEYS.resumeFen) || "";
 let state = createInitialState();
 let engineReady = false;
 let started = false;
@@ -324,6 +332,10 @@ function applyTranslations() {
   els.setup.setAttribute("aria-label", t("setup"));
   els.setup.setAttribute("title", t("setup"));
   setStatus(statusKey, statusArgs, statusIsError);
+}
+
+function moveCountFromRows() {
+  return moveRows.reduce((count, row) => count + (row.white ? 1 : 0) + (row.black ? 1 : 0), 0);
 }
 
 function playerFor(side) {
@@ -495,7 +507,9 @@ async function startGame() {
   const token = ++runToken;
   thinking = false;
   moveRows = [];
-  const fen = els.fenInput.value.trim();
+  const fen = (pendingResumeFen || els.fenInput.value).trim();
+  pendingResumeFen = "";
+  localStorage.removeItem(STORAGE_KEYS.resumeFen);
   const payload = await engine.send("setFen", { fen });
   state = payload.state;
   currentFen = payload.fen || fen || INITIAL_FEN;
@@ -529,6 +543,12 @@ function backToSetup() {
   setStatus("statusReady");
   showSetup();
   render();
+}
+
+function goToAnalysis() {
+  localStorage.setItem(STORAGE_KEYS.pgn, makePgn());
+  localStorage.setItem(STORAGE_KEYS.analysisMoveIndex, String(Math.max(0, moveCountFromRows() - 1)));
+  window.location.href = "/analysis.html";
 }
 
 async function playHumanMove(pit) {
@@ -671,15 +691,18 @@ els.analyzePgn.addEventListener("click", () => {
     setError(new Error("Please enter PGN moves"));
     return;
   }
-  localStorage.setItem('togyzkumalak_pgn', pgn);
-  window.location.href = '/analysis.html';
+  localStorage.setItem(STORAGE_KEYS.pgn, pgn);
+  localStorage.setItem(STORAGE_KEYS.analysisMoveIndex, "0");
+  window.location.href = "/analysis.html";
 });
 
 els.setup.addEventListener("click", backToSetup);
+document.querySelector("#analysis-button")?.addEventListener("click", goToAnalysis);
 els.downloadPgn.addEventListener("click", downloadPgn);
 
 els.language.addEventListener("change", () => {
   lang = els.language.value;
+  localStorage.setItem(STORAGE_KEYS.language, lang);
   applyTranslations();
   render();
 });
@@ -696,6 +719,18 @@ engine
   .send("init")
   .then((payload) => {
     engineReady = true;
+    if (pendingResumeFen) {
+      return engine.send("setFen", { fen: pendingResumeFen }).then((fenPayload) => {
+        state = fenPayload.state;
+        currentFen = fenPayload.fen || pendingResumeFen;
+        startFen = currentFen;
+        els.fenInput.value = currentFen;
+        pendingResumeFen = "";
+        localStorage.removeItem(STORAGE_KEYS.resumeFen);
+        setStatus("statusReady");
+        render();
+      });
+    }
     state = payload.state;
     currentFen = payload.fen || INITIAL_FEN;
     startFen = currentFen;

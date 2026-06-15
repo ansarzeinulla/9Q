@@ -2,6 +2,76 @@
 
 const INITIAL_FEN = "9,9,9,9,9,9,9,9,9/9,9,9,9,9,9,9,9,9 0,0 -,- w 0";
 
+const I18N = {
+  en: {
+    analysisTitle: "Togyzkumalak PGN Viewer",
+    backToGame: "Back to Game",
+    playFromHere: "Play from here",
+    moveHistory: "Move History",
+    moveHistoryHint: "Click any move to jump to that position.",
+    engineEvaluations: "Engine Evaluations",
+    engineHint: "Best lines from the current position.",
+    dagAnalysis: "DAG Analysis",
+    analyze: "Analyzing...",
+    winningPosition: "Winning position",
+    losingPosition: "Losing position",
+    beginner: "Beginner",
+    follower: "Follower"
+  },
+  ru: {
+    analysisTitle: "Просмотрщик PGN тогызкумалака",
+    backToGame: "Назад к игре",
+    playFromHere: "Играть отсюда",
+    moveHistory: "История ходов",
+    moveHistoryHint: "Нажмите на любой ход, чтобы перейти к этой позиции.",
+    engineEvaluations: "Оценки движка",
+    engineHint: "Лучшие варианты из текущей позиции.",
+    dagAnalysis: "Анализ DAG",
+    analyze: "Анализ...",
+    winningPosition: "Выигрышная позиция",
+    losingPosition: "Проигрышная позиция",
+    beginner: "Начинающий",
+    follower: "Отвечающий"
+  },
+  kk: {
+    analysisTitle: "Тоғызқұмалақ PGN қарауышы",
+    backToGame: "Ойынға қайту",
+    playFromHere: "Осы жерден ойнау",
+    moveHistory: "Жүрістер тарихы",
+    moveHistoryHint: "Осы позицияға өту үшін кез келген жүрісті басыңыз.",
+    engineEvaluations: "Қозғалтқыш бағалауы",
+    engineHint: "Ағымдағы позициядағы ең жақсы жүрістер.",
+    dagAnalysis: "DAG талдау",
+    analyze: "Талдау...",
+    winningPosition: "Ұтатын позиция",
+    losingPosition: "Ұтылатын позиция",
+    beginner: "Бастаушы",
+    follower: "Қостаушы"
+  },
+  ky: {
+    analysisTitle: "Тогуз коргоол PGN көрүүчү",
+    backToGame: "Оюнга кайтуу",
+    playFromHere: "Бул жерден ойноо",
+    moveHistory: "Жүрүш тарыхы",
+    moveHistoryHint: "Бул позицияга өтүү үчүн каалаган жүрүштү басыңыз.",
+    engineEvaluations: "Кыймылдаткыч баалоосу",
+    engineHint: "Учурдагы позициядагы эң жакшы жүрүштөр.",
+    dagAnalysis: "DAG талдоо",
+    analyze: "Талдоо...",
+    winningPosition: "Жеңиштүү позиция",
+    losingPosition: "Жеңилүүчү позиция",
+    beginner: "Баштоочу",
+    follower: "Коштоочу"
+  }
+};
+
+const STORAGE_KEYS = {
+  pgn: "togyzkumalak_pgn",
+  analysisMoveIndex: "togyzkumalak_analysis_move_index",
+  analysisFen: "togyzkumalak_resume_fen",
+  language: "togyzkumalak_language"
+};
+
 // State
 let currentPosition = null;
 let moveHistory = [];
@@ -15,12 +85,15 @@ let currentEvaluations = [];
 let syncPromise = Promise.resolve();
 let dagTimer = null;
 let currentAnalysisGen = 0;
+let lang = localStorage.getItem(STORAGE_KEYS.language) || "en";
 
 // DOM elements
 const els = {
   board: document.getElementById('board'),
   moveHistory: document.getElementById('move-history'),
   evaluations: document.getElementById('evaluations'),
+  playFromHere: document.getElementById('play-from-here'),
+  language: document.getElementById('analysis-language'),
   rotateBoard: document.getElementById('rotate-board'),
   navFirst: document.getElementById('nav-first'),
   navPrev: document.getElementById('nav-prev'),
@@ -31,6 +104,35 @@ const els = {
   whiteKazan: document.getElementById('white-kazan'),
   blackKazan: document.getElementById('black-kazan')
 };
+
+function t(key) {
+  return (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
+}
+
+function applyTranslations() {
+  document.documentElement.lang = lang;
+  document.title = t("analysisTitle");
+  const topLinks = document.querySelector(".top-links");
+  if (topLinks) {
+    const spans = topLinks.querySelectorAll("span.muted-link, button, a");
+    if (spans[0]) spans[0].textContent = "Togyzkumalak PGN Viewer";
+    if (spans[1]) spans[1].textContent = t("playFromHere");
+    if (spans[2]) spans[2].textContent = t("backToGame");
+  }
+  const headings = document.querySelectorAll(".sidebar-heading h2");
+  const hints = document.querySelectorAll(".sidebar-heading p");
+  if (headings[0]) headings[0].textContent = t("moveHistory");
+  if (hints[0]) hints[0].textContent = t("moveHistoryHint");
+  if (headings[1]) headings[1].textContent = t("engineEvaluations");
+  if (hints[1]) hints[1].textContent = t("engineHint");
+  const dagLabel = document.querySelector(".toggle-label");
+  if (dagLabel) dagLabel.textContent = t("dagAnalysis");
+  const whiteLabel = document.querySelector("#white-kazan").parentElement?.querySelector(".side-label");
+  const blackLabel = document.querySelector("#black-kazan").parentElement?.querySelector(".side-label");
+  if (whiteLabel) whiteLabel.textContent = t("beginner");
+  if (blackLabel) blackLabel.textContent = t("follower");
+  if (els.language) els.language.value = lang;
+}
 
 // Engine client (similar to app.js)
 class EngineClient {
@@ -452,13 +554,13 @@ function renderEvaluations() {
   
   const title = document.createElement('div');
   title.className = 'evaluations-title';
-  title.textContent = 'DAG Analysis';
+  title.textContent = t("dagAnalysis");
   container.appendChild(title);
   
   if (currentPosition.gameOver) {
     const terminalMsg = document.createElement('div');
     terminalMsg.className = 'evaluation-moves';
-    terminalMsg.textContent = currentPosition.winner === currentPosition.toPlay ? 'Winning position' : 'Losing position';
+    terminalMsg.textContent = currentPosition.winner === currentPosition.toPlay ? t("winningPosition") : t("losingPosition");
     container.appendChild(terminalMsg);
     return;
   }
@@ -466,7 +568,7 @@ function renderEvaluations() {
   if (currentEvaluations.length === 0) {
     const noMovesMsg = document.createElement('div');
     noMovesMsg.className = 'evaluation-moves';
-    noMovesMsg.textContent = 'Analyzing...';
+    noMovesMsg.textContent = t("analyze");
     container.appendChild(noMovesMsg);
     return;
   }
@@ -538,7 +640,7 @@ function loadPgn(pgnString) {
     return;
   }
   
-  const pgn = pgnString || localStorage.getItem('togyzkumalak_pgn') || '';
+  const pgn = pgnString || localStorage.getItem(STORAGE_KEYS.pgn) || '';
   if (!pgn) return;
   
   const moves = parsePgn(pgn);
@@ -588,6 +690,11 @@ function loadPgn(pgnString) {
       
       currentMoveIndex = -1;
       currentPosition = allPositions[0];
+      const storedIndex = Number(localStorage.getItem(STORAGE_KEYS.analysisMoveIndex));
+      if (Number.isInteger(storedIndex) && storedIndex >= 0 && storedIndex < moveHistory.length) {
+        currentMoveIndex = storedIndex;
+        currentPosition = allPositions[storedIndex + 1] || allPositions[0];
+      }
       
       renderBoard();
       renderMoveHistory();
@@ -603,6 +710,12 @@ function loadPgn(pgnString) {
       console.error(error);
     }
   }).catch(err => console.error(err));
+}
+
+function playFromHere() {
+  if (!currentPosition) return;
+  localStorage.setItem(STORAGE_KEYS.resumeFen, allFens[currentMoveIndex + 1] || allFens[0] || INITIAL_FEN);
+  window.location.href = '/game.html';
 }
 // Rotate board
 function rotateBoard() {
@@ -643,6 +756,15 @@ els.navFirst.addEventListener('click', goToFirst);
 els.navPrev.addEventListener('click', goToPrev);
 els.navNext.addEventListener('click', goToNext);
 els.navLast.addEventListener('click', goToLast);
+els.playFromHere?.addEventListener('click', playFromHere);
+els.language?.addEventListener('change', () => {
+  lang = els.language.value;
+  localStorage.setItem(STORAGE_KEYS.language, lang);
+  applyTranslations();
+  renderMoveHistory();
+  updateGameInfo();
+  renderEvaluations();
+});
 els.dagToggle.addEventListener('change', () => {
   dagEnabled = els.dagToggle.checked;
   if (dagEnabled) {
@@ -663,6 +785,7 @@ engine
     allPositions.push(payload.state);
     allFens.push(payload.fen);
     currentPosition = payload.state;
+    applyTranslations();
     renderBoard();
     renderMoveHistory();
     updateGameInfo();

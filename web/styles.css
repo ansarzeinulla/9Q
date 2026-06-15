@@ -518,6 +518,10 @@ textarea {
   padding: 0 9px;
 }
 
+.move-tools .analysis-link-button {
+  min-width: 90px;
+}
+
 .move-tools svg {
   width: 18px;
   height: 18px;
