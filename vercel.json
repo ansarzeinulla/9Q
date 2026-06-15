@@ -1,11 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npm run build",
-  "outputDirectory": "dist",
+  "outputDirectory": ".",
   "cleanUrls": true,
   "headers": [
     {
-      "source": "/wasm/(.*)",
+      "source": "/web/public/wasm/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -14,6 +14,14 @@
       ]
     }
   ],
-  "rewrites":[{ "source": "/togyzkumalak-pgn", "destination": "/web/togyzkumalak-pgn.html" }]
+  "rewrites": [
+    { 
+      "source": "/togyzkumalak-pgn", 
+      "destination": "/web/togyzkumalak-pgn.html" 
+    },
+    {
+        "source": "/",
+        "destination": "/web/index.html"
+    }
+  ]
 }
-
