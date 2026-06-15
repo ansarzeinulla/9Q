@@ -76,10 +76,12 @@ self.addEventListener("message", async (event) => {
     } else if (type === "analyzePosition") {
       // Analyze all legal moves with DAG
       const state = readJson(Module, "_tg_state_json");
+      const legalPits = Array.isArray(state.legal) && state.legal.length > 0
+        ? state.legal
+        : [0, 1, 2, 3, 4, 5, 6, 7, 8];
       const evaluations = [];
       
-      // Try all 9 pits and let the engine tell us which are legal
-      for (let pit = 0; pit < 9; pit++) {
+      for (const pit of legalPits) {
         // Save current state
         const currentFen = readString(Module, "_tg_fen_string");
         

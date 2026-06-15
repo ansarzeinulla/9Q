@@ -66,23 +66,21 @@ const engine = new EngineClient();
 
 // Parse 9Q-PGN moves (format: "19 59 22+ 72x" etc.)
 function parsePgn(pgn) {
-  const moves = [];
-  // Remove move numbers and result
+  if (typeof pgn !== "string") return [];
+
   const cleanPgn = pgn
-    .replace(/\d+\./g, '')
-    .replace(/1-0|0-1|1\/2-1\/2|\*/g, '')
+    .replace(/\[[^\]]*]/g, " ")
+    .replace(/\{[^}]*}/g, " ")
+    .replace(/;.*$/gm, " ")
+    .replace(/\d+\.(\.\.)?/g, " ")
+    .replace(/\$\d+/g, " ")
+    .replace(/1-0|0-1|1\/2-1\/2|\*/g, " ")
     .trim();
-  
-  // Split by whitespace
-  const tokens = cleanPgn.split(/\s+/);
-  
-  for (const token of tokens) {
-    if (token && token.length >= 2) {
-      moves.push(token);
-    }
-  }
-  
-  return moves;
+
+  return cleanPgn
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) => /^[1-9][1-9][+x]?$/.test(token));
 }
 
 // Parse a single move (format: "19", "59", "22+", "72x")
@@ -241,6 +239,8 @@ function goToMove(index) {
   renderBoard();
   renderMoveHistory();
   updateGameInfo();
+  currentEvaluations = [];
+  renderEvaluations();
   
   syncPromise = syncPromise.then(async () => {
     try {
@@ -336,6 +336,8 @@ function handlePitClick(side, pit) {
     renderBoard();
     renderMoveHistory();
     updateGameInfo();
+    currentEvaluations = [];
+    renderEvaluations();
     
     // Debounce the DAG analysis so it doesn't lag the UI
     if (dagEnabled) {
@@ -547,6 +549,11 @@ function loadPgn(pgnString) {
   
   // Ensure parsing & loading happens safely in the queue
   syncPromise = syncPromise.then(async () => {
+    currentAnalysisGen++;
+    clearTimeout(dagTimer);
+    currentEvaluations = [];
+    renderEvaluations();
+
     moveHistory = moves;
     currentMoveIndex = -1;
     allPositions = [];
@@ -585,6 +592,8 @@ function loadPgn(pgnString) {
       renderBoard();
       renderMoveHistory();
       updateGameInfo();
+      currentEvaluations = [];
+      renderEvaluations();
       
       if (dagEnabled) {
         runDagAnalysis();
