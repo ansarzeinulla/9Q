@@ -672,7 +672,7 @@ els.analyzePgn.addEventListener("click", () => {
     return;
   }
   localStorage.setItem('togyzkumalak_pgn', pgn);
-  window.location.href = '/togyzkumalak-pgn.html';
+  window.location.href = '/analysis.html';
 });
 
 els.setup.addEventListener("click", backToSetup);

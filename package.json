@@ -8,6 +8,7 @@
     "build": "node web/scripts/build-static.mjs",
     "build:wasm": "bash web/scripts/build-wasm.sh",
     "setup:emscripten": "bash web/scripts/setup-emscripten.sh",
-    "check": "npm run build"
+    "check": "npm run build",
+    "preview": "node web/scripts/serve.mjs"
   }
 }

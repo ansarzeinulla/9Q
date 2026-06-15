@@ -10,7 +10,10 @@
     }
   ],
   "rewrites": [
-    { "source": "/togyzkumalak-pgn", "destination": "/togyzkumalak-pgn.html" },
+    { "source": "/", "destination": "/game.html" },
+    { "source": "/game", "destination": "/game.html" },
+    { "source": "/analysis", "destination": "/analysis.html" },
+    { "source": "/togyzkumalak-pgn", "destination": "/analysis.html" },
     { "source": "/wasm/(.*)", "destination": "/public/wasm/$1" }
   ]
 }
