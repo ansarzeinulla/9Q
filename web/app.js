@@ -732,6 +732,7 @@ engine
   .then((payload) => {
     engineReady = true;
     if (pendingResumeFen) {
+      els.fenInput.value = pendingResumeFen;
       return startGame();
     }
     state = payload.state;
