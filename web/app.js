@@ -538,10 +538,15 @@ async function loadInitialFen() {
   currentFen = payload.fen || INITIAL_FEN;
   startFen = currentFen;
   els.fenInput.value = currentFen;
+  els.pgnInput.value = "";
   moveRows = [];
   started = false;
   thinking = false;
   runToken++;
+  pendingResumeFen = "";
+  localStorage.removeItem(STORAGE_KEYS.resumeFen);
+  localStorage.removeItem(STORAGE_KEYS.pgn);
+  localStorage.removeItem(STORAGE_KEYS.analysisMoveIndex);
   setStatus("statusReady");
   render();
 }
@@ -727,16 +732,7 @@ engine
   .then((payload) => {
     engineReady = true;
     if (pendingResumeFen) {
-      return engine.send("setFen", { fen: pendingResumeFen }).then((fenPayload) => {
-        state = fenPayload.state;
-        currentFen = fenPayload.fen || pendingResumeFen;
-        startFen = currentFen;
-        els.fenInput.value = currentFen;
-        pendingResumeFen = "";
-        localStorage.removeItem(STORAGE_KEYS.resumeFen);
-        setStatus("statusReady");
-        render();
-      });
+      return startGame();
     }
     state = payload.state;
     currentFen = payload.fen || INITIAL_FEN;
