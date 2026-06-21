@@ -1,26 +1,33 @@
 .pgn-viewer-page {
-  width: min(1400px, calc(100vw - 28px));
+  width: 100vw;
+  min-height: 100dvh;
   margin: 0 auto;
-  padding: 14px 0 28px;
+  padding: 8px;
 }
 
 .pgn-viewer-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) 340px;
-  gap: 18px;
-  padding: 20px 0;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 8px;
+  height: calc(100dvh - 58px);
+  align-items: stretch;
 }
 
 .board-section {
   display: grid;
-  gap: 14px;
+  grid-template-rows: 32px minmax(0, 1fr);
+  gap: 6px;
   align-content: start;
+  min-width: 0;
+  min-height: 0;
 }
 
 .analysis-sidebar {
   display: grid;
   gap: 12px;
   align-content: start;
+  min-width: 0;
+  min-height: 0;
 }
 
 .board-controls {
@@ -149,7 +156,8 @@
 
 .board {
   width: 100%;
-  min-height: 420px;
+  height: 100%;
+  min-height: 0;
   border-radius: 6px;
   background: linear-gradient(145deg, var(--board), var(--board-dark));
   border: 1px solid #102820;
@@ -252,7 +260,7 @@
 
 .move-history {
   min-height: 0;
-  max-height: 340px;
+  max-height: calc(100dvh - 280px);
   overflow-y: auto;
   padding-right: 2px;
 }
@@ -323,6 +331,7 @@
 @media (max-width: 1024px) {
   .pgn-viewer-layout {
     grid-template-columns: 1fr;
+    height: auto;
   }
 
   .analysis-sidebar {
@@ -334,14 +343,14 @@
   }
 
   .board {
-    min-height: 340px;
+    min-height: 520px;
   }
 }
 
 @media (max-width: 640px) {
   .pgn-viewer-page {
-    width: min(100% - 18px, 680px);
-    padding-top: 10px;
+    width: min(100vw, 680px);
+    padding: 6px;
   }
 
   .board-controls {
@@ -357,7 +366,7 @@
   .board {
     padding: 6px;
     gap: 6px;
-    min-height: 250px;
+    min-height: 280px;
   }
 
   .pit-row {

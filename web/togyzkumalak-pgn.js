@@ -115,7 +115,7 @@ function applyTranslations() {
   const topLinks = document.querySelector(".top-links");
   if (topLinks) {
     const spans = topLinks.querySelectorAll("span.muted-link, button, a");
-    if (spans[0]) spans[0].textContent = "Togyzkumalak PGN Viewer";
+    if (spans[0]) spans[0].textContent = t("analysisTitle");
     if (spans[1]) spans[1].textContent = t("playFromHere");
     if (spans[2]) spans[2].textContent = t("backToGame");
   }
@@ -640,14 +640,10 @@ function loadPgn(pgnString) {
     return;
   }
   
-  const pgn = pgnString || localStorage.getItem(STORAGE_KEYS.pgn) || '';
-  if (!pgn) return;
+  const storedPgn = pgnString ?? localStorage.getItem(STORAGE_KEYS.pgn) ?? '';
+  const pgn = typeof storedPgn === 'string' ? storedPgn : '';
   
   const moves = parsePgn(pgn);
-  if (moves.length === 0) {
-    alert('No valid moves found in PGN');
-    return;
-  }
   
   // Ensure parsing & loading happens safely in the queue
   syncPromise = syncPromise.then(async () => {
@@ -666,6 +662,21 @@ function loadPgn(pgnString) {
       const resetPayload = await engine.send("reset");
       allPositions.push(resetPayload.state);
       allFens.push(resetPayload.fen);
+
+      if (moves.length === 0) {
+        currentPosition = resetPayload.state;
+        localStorage.removeItem(STORAGE_KEYS.analysisMoveIndex);
+        renderBoard();
+        renderMoveHistory();
+        updateGameInfo();
+        currentEvaluations = [];
+        renderEvaluations();
+
+        if (dagEnabled) {
+          runDagAnalysis();
+        }
+        return;
+      }
       
       // 2) Build states and FENs loop natively
       for (const moveStr of moves) {

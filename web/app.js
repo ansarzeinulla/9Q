@@ -22,6 +22,8 @@ const I18N = {
     startGame: "Start",
     initialFen: "Initial FEN",
     analyzePgn: "Analyze PGN",
+    analysisButton: "Analysis",
+    downloadPgnButton: "PGN",
     formats: "Formats",
     fenTitle: "9Q-FEN",
     fenExplain: "FEN has five fields: white pits / black pits, kazans, tuzdyks, side to move, and half-move count.",
@@ -68,6 +70,8 @@ const I18N = {
     startGame: "Начать",
     initialFen: "Начальный FEN",
     analyzePgn: "Анализировать PGN",
+    analysisButton: "Анализ",
+    downloadPgnButton: "PGN",
     formats: "Форматы",
     fenTitle: "9Q-FEN",
     fenExplain: "FEN состоит из пяти полей: лунки начинающего / лунки отвечающего, казаны, туздыки, чей ход и счетчик полуходов.",
@@ -115,6 +119,8 @@ kk: {
     startGame: "Бастау",
     initialFen: "Бастапқы FEN",
     analyzePgn: "PGN талдау",
+    analysisButton: "Талдау",
+    downloadPgnButton: "PGN",
     formats: "Форматтар",
     fenTitle: "9Q-FEN",
     fenExplain: "FEN бес бөліктен тұрады: бастаушының отаулары / қостаушының отаулары, қазандар, тұздықтар, жүріс кезегі және жартылай жүріс санағышы.",
@@ -162,6 +168,8 @@ ky: {
     startGame: "Баштоо",
     initialFen: "Баштапкы FEN",
     analyzePgn: "PGN анализ",
+    analysisButton: "Анализ",
+    downloadPgnButton: "PGN",
     formats: "Форматтар",
     fenTitle: "9Q-FEN",
     fenExplain: "FEN беш бөлүктөн турат: баштоочунун үйлөрү / коштоочунун үйлөрү, казандар, туздар, жүрүү кезеги жана жарым жүрүштөрдүн эсептегичи.",
@@ -322,13 +330,16 @@ function setError(error) {
 
 function applyTranslations() {
   document.documentElement.lang = lang;
-  document.title = "9Q";
+  document.title = `${t("mainTitle")} - 9Q`;
   document.querySelectorAll("[data-i18n]").forEach((node) => {
     node.textContent = t(node.dataset.i18n);
   });
   document.querySelectorAll("[data-player-option]").forEach((option) => {
     option.textContent = t(PLAYER_KEYS[option.dataset.playerOption]);
   });
+  if (els.analysisButton) els.analysisButton.textContent = t("analysisButton");
+  if (els.downloadPgn) els.downloadPgn.textContent = t("downloadPgnButton");
+  if (els.pgnInput) els.pgnInput.placeholder = t("pgnInput");
   els.setup.setAttribute("aria-label", t("setup"));
   els.setup.setAttribute("title", t("setup"));
   setStatus(statusKey, statusArgs, statusIsError);
@@ -687,10 +698,6 @@ els.initialFen.addEventListener("click", () => {
 
 els.analyzePgn.addEventListener("click", () => {
   const pgn = els.pgnInput.value.trim();
-  if (!pgn) {
-    setError(new Error("Please enter PGN moves"));
-    return;
-  }
   localStorage.setItem(STORAGE_KEYS.pgn, pgn);
   localStorage.setItem(STORAGE_KEYS.analysisMoveIndex, "0");
   window.location.href = "/analysis.html";
