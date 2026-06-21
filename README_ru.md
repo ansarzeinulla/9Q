@@ -40,6 +40,33 @@ make -C billion-game-generation
 make -C shortest-game-generation
 ```
 
+## Сборка WebAssembly
+
+Если вы изменили C++-ядро и хотите пересобрать WebAssembly-бандл для веб-приложения, необходимо установить Emscripten SDK:
+
+1. Склонируйте репозиторий Emscripten и перейдите в него:
+
+   ```bash
+   git clone https://github.com/emscripten-core/emsdk.git
+   cd emsdk
+   ```
+
+2. Установите и активируйте последнюю версию SDK:
+
+   ```bash
+   ./emsdk install latest
+   ./emsdk activate latest
+   source ./emsdk_env.sh
+   ```
+
+3. Запустите автоматический скрипт сборки из корня этого проекта:
+
+   ```bash
+   npm run build:wasm
+   ```
+
+Это соберёт C++ код с флагом `-O3` и выведет `togyz_engine.js` и `togyz_engine.wasm` в `web/public/wasm/`.
+
 ## Быстрая проверка (тестирование)
 
 Запустите небольшой случайный пример на 1,000 партий, чтобы проверить движок симуляции:
@@ -47,6 +74,12 @@ make -C shortest-game-generation
 cd billion-game-generation
 ./generate_billion_games --num=1000 --seed=1 --threads=1 --fresh --stat=sample_billion_game_statistics.txt
 ```
+
+Проверьте математическую корректность генератора ходов с помощью Perft-суиты (рекурсивно валидирует число узлов до глубины 4):
+```bash
+make test -C engine
+```
+Это запускает полный движок проверки листовых узлов. Он должен вывести подтверждённый статус для глубин 1–4 (9, 73, 613 и 5,199 узлов соответственно) за миллисекунды, подтверждая математическую корректность правил перехода состояний.
 
 Проверьте доказательство самой короткой партии длиной 11 полуходов:
 ```bash

@@ -20,80 +20,12 @@ constexpr double SEARCH_INF = 10000000.0;
 #endif
 
 constexpr int QUIESCENCE_DEPTH = DAG_Q_DEPTH;
+constexpr size_t DEFAULT_TT_MB = 256;
 
-enum class Bound : uint8_t {
-    Exact,
-    Lower,
-    Upper,
+struct ScoredMove {
+    int move;
+    int score;
 };
-
-struct NormalizedKey {
-    uint64_t side1_lo = 0;
-    uint64_t side1_hi = 0;
-    uint64_t side2_lo = 0;
-    uint64_t side2_hi = 0;
-    uint16_t kazan_me = 0;
-    uint16_t kazan_opp = 0;
-    int8_t tuzduk_me = -1;
-    int8_t tuzduk_opp = -1;
-
-    bool operator==(const NormalizedKey& other) const {
-        return side1_lo == other.side1_lo &&
-               side1_hi == other.side1_hi &&
-               side2_lo == other.side2_lo &&
-               side2_hi == other.side2_hi &&
-               kazan_me == other.kazan_me &&
-               kazan_opp == other.kazan_opp &&
-               tuzduk_me == other.tuzduk_me &&
-               tuzduk_opp == other.tuzduk_opp;
-    }
-};
-
-static uint64_t mix64(uint64_t x) {
-    x += 0x9e3779b97f4a7c15ULL;
-    x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9ULL;
-    x = (x ^ (x >> 27)) * 0x94d049bb133111ebULL;
-    return x ^ (x >> 31);
-}
-
-struct KeyHash {
-    size_t operator()(const NormalizedKey& k) const {
-        uint64_t h = mix64(k.side1_lo);
-        h ^= mix64(k.side1_hi + 0x9e3779b97f4a7c15ULL);
-        h ^= mix64(k.side2_lo + 0xbf58476d1ce4e5b9ULL);
-        h ^= mix64(k.side2_hi + 0x94d049bb133111ebULL);
-        h ^= mix64((uint64_t(k.kazan_me) << 32) | k.kazan_opp);
-        h ^= mix64((uint64_t(uint8_t(k.tuzduk_me + 1)) << 8) |
-                   uint8_t(k.tuzduk_opp + 1));
-        return static_cast<size_t>(h);
-    }
-};
-
-struct TTEntry {
-    double value = 0.0;
-    int depth = -1;
-    Bound bound = Bound::Exact;
-};
-
-NormalizedKey normalize_key(const Bitboard& board,
-                            const std::array<int, 2>& kazans,
-                            const std::array<int, 2>& tuzduks,
-                            int to_play) {
-    int opponent = 1 - to_play;
-    uint128 mover_side = (to_play == PLAYER_1) ? board.side1 : board.side2;
-    uint128 opponent_side = (to_play == PLAYER_1) ? board.side2 : board.side1;
-
-    NormalizedKey key;
-    key.side1_lo = static_cast<uint64_t>(mover_side);
-    key.side1_hi = static_cast<uint64_t>(mover_side >> 64);
-    key.side2_lo = static_cast<uint64_t>(opponent_side);
-    key.side2_hi = static_cast<uint64_t>(opponent_side >> 64);
-    key.kazan_me = static_cast<uint16_t>(kazans[to_play]);
-    key.kazan_opp = static_cast<uint16_t>(kazans[opponent]);
-    key.tuzduk_me = static_cast<int8_t>(tuzduks[to_play]);
-    key.tuzduk_opp = static_cast<int8_t>(tuzduks[opponent]);
-    return key;
-}
 
 double terminal_value(int winner_code, int perspective_player) {
     if (winner_code == -1) return 0.0;
@@ -138,6 +70,34 @@ void sort_moves(const Bitboard& board, const std::array<int, 2>& tuzduks,
     }
 }
 
+void order_moves(std::array<int, 9>& moves, int count, const Bitboard& board,
+                 const std::array<int, 2>& tuzduks, int player,
+                 uint16_t tt_best_move) {
+    std::array<ScoredMove, 9> scored_moves{};
+    for (int i = 0; i < count; ++i) {
+        int move = moves[i];
+        int score = 0;
+        if (static_cast<uint16_t>(move) == tt_best_move) {
+            score = 100000;
+        } else if (move_order_key(board, tuzduks, player, move) <= 1) {
+            score = 1000 - move_order_key(board, tuzduks, player, move);
+        } else {
+            score = 10 - move_order_key(board, tuzduks, player, move);
+        }
+        scored_moves[static_cast<size_t>(i)] = ScoredMove{move, score};
+    }
+
+    std::sort(scored_moves.begin(), scored_moves.begin() + count,
+              [](const ScoredMove& a, const ScoredMove& b) {
+                  if (a.score != b.score) return a.score > b.score;
+                  return a.move < b.move;
+              });
+
+    for (int i = 0; i < count; ++i) {
+        moves[static_cast<size_t>(i)] = scored_moves[static_cast<size_t>(i)].move;
+    }
+}
+
 bool is_tactical_transition(const std::array<int, 2>& before_kazans,
                             const std::array<int, 2>& before_tuzduks,
                             const std::array<int, 2>& after_kazans,
@@ -158,14 +118,16 @@ double evaluate_leaf(const Bitboard& board, const std::array<int, 2>& kazans,
 
 class DagSearcher {
 public:
-    explicit DagSearcher(size_t reserve_hint,
-                         const std::unordered_map<uint64_t, int>& root_repetitions,
+    explicit DagSearcher(size_t table_size_mb,
+                         const std::vector<uint64_t>& root_history,
                          const Evaluator& evaluator_ref,
                          const Clock::time_point* deadline_ref = nullptr,
                          bool* timed_out_ref = nullptr)
         : evaluator(evaluator_ref), deadline(deadline_ref),
-          timed_out(timed_out_ref), repetitions(root_repetitions) {
-        table.reserve(reserve_hint);
+          timed_out(timed_out_ref), history_stack(root_history) {
+        if (!global_tt) {
+            init_tt(table_size_mb);
+        }
     }
 
     double search(Bitboard& board, std::array<int, 2>& kazans,
@@ -190,23 +152,26 @@ public:
 
         double alpha_original = alpha;
         bool use_tt = !has_repetition_pressure();
-        NormalizedKey key;
+        uint64_t tt_hash = 0;
+        TTEntry tt_entry;
+        uint16_t tt_best_move = 0;
         if (use_tt) {
-            key = normalize_key(board, kazans, tuzduks, to_play);
-            auto found = table.find(key);
-            if (found != table.end() && found->second.depth >= depth) {
-                const TTEntry& entry = found->second;
-                if (entry.bound == Bound::Exact) {
+            tt_hash = exact_hash(board, kazans, tuzduks, to_play);
+            if (global_tt && global_tt->probe(tt_hash, tt_entry) &&
+                tt_entry.depth >= static_cast<uint8_t>(std::clamp(depth, 0, 255))) {
+                tt_best_move = tt_entry.best_move;
+                double stored_eval = static_cast<double>(tt_entry.eval);
+                if (tt_entry.flag == 1) {
                     stats.tt_hits++;
-                    return entry.value;
+                    return stored_eval;
                 }
-                if (entry.bound == Bound::Lower && entry.value >= beta) {
+                if (tt_entry.flag == 2 && stored_eval >= beta) {
                     stats.tt_hits++;
-                    return entry.value;
+                    return stored_eval;
                 }
-                if (entry.bound == Bound::Upper && entry.value <= alpha) {
+                if (tt_entry.flag == 3 && stored_eval <= alpha) {
                     stats.tt_hits++;
-                    return entry.value;
+                    return stored_eval;
                 }
             }
         }
@@ -221,13 +186,14 @@ public:
                                  false, evaluator);
         }
 
-        sort_moves(board, tuzduks, to_play, moves, count);
+        order_moves(moves, count, board, tuzduks, to_play, tt_best_move);
 
         Bitboard board_backup = board;
         auto kazans_backup = kazans;
         auto tuzduks_backup = tuzduks;
 
         double best = -SEARCH_INF;
+        uint16_t node_best_move = tt_best_move;
         for (int i = 0; i < count; ++i) {
             if (deadline_reached()) break;
             int next_winner = -2;
@@ -259,7 +225,7 @@ public:
                 break;
             }
             if (!terminal) {
-                leave_repetition(exact_hash(board, kazans, tuzduks, next_to_play));
+                leave_repetition();
             }
 
             double value = -child_value;
@@ -275,11 +241,15 @@ public:
             if (value >= WIN_SCORE) {
                 stats.forced_wins++;
                 best = value;
+                node_best_move = static_cast<uint16_t>(moves[i]);
                 alpha = std::max(alpha, value);
                 break;
             }
 
-            if (value > best) best = value;
+            if (value > best) {
+                best = value;
+                node_best_move = static_cast<uint16_t>(moves[i]);
+            }
             if (value > alpha) alpha = value;
 
             if (alpha >= beta) {
@@ -288,16 +258,19 @@ public:
             }
         }
 
-        Bound bound = Bound::Exact;
+        uint8_t flag = 1;
         if (best <= alpha_original) {
-            bound = Bound::Upper;
+            flag = 3;
         } else if (best >= beta) {
-            bound = Bound::Lower;
+            flag = 2;
         }
         if (use_tt) {
-            table[key] = TTEntry{best, depth, bound};
+            global_tt->store(tt_hash,
+                        static_cast<int16_t>(std::clamp(best, -32768.0, 32767.0)),
+                        static_cast<uint8_t>(std::clamp(depth, 0, 255)), flag,
+                        node_best_move);
             stats.tt_stores++;
-            stats.table_entries = static_cast<uint64_t>(table.size());
+            stats.table_entries = global_tt->entries();
         }
         return best;
     }
@@ -338,7 +311,7 @@ public:
             return stand_pat;
         }
 
-        sort_moves(board, tuzduks, to_play, moves, count);
+        order_moves(moves, count, board, tuzduks, to_play, 0);
 
         Bitboard board_backup = board;
         auto kazans_backup = kazans;
@@ -382,8 +355,7 @@ public:
                     break;
                 }
                 if (!terminal) {
-                    leave_repetition(exact_hash(board, kazans, tuzduks,
-                                                next_to_play));
+                    leave_repetition();
                 }
                 value = -child_value;
             }
@@ -409,12 +381,39 @@ public:
         return best;
     }
 
-    std::unordered_map<NormalizedKey, TTEntry, KeyHash> table;
+    size_t table_entries() const { return global_tt ? global_tt->entries() : 0; }
+
+    uint64_t exact_hash(const Bitboard& board, const std::array<int, 2>& kazans,
+                        const std::array<int, 2>& tuzduks, int to_play) const {
+        return Zobrist::get_initial_hash_bitboard(board, kazans, tuzduks, to_play);
+    }
+
+    bool enter_repetition(uint64_t hash) {
+        history_stack.push_back(hash);
+        int seen = 0;
+        for (int i = static_cast<int>(history_stack.size()) - 1; i >= 0; i -= 2) {
+            if (history_stack[static_cast<size_t>(i)] == hash) {
+                ++seen;
+                if (seen >= 3) {
+                    stats.repetition_draws++;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    void leave_repetition() {
+        if (!history_stack.empty()) history_stack.pop_back();
+    }
+
+    SearchStats stats;
+
+private:
     const Evaluator& evaluator;
     const Clock::time_point* deadline;
     bool* timed_out;
-    std::unordered_map<uint64_t, int> repetitions;
-    SearchStats stats;
+    std::vector<uint64_t> history_stack;
 
     bool deadline_reached() {
         if (!deadline || !timed_out) return false;
@@ -424,45 +423,21 @@ public:
         return true;
     }
 
-    uint64_t exact_hash(const Bitboard& board, const std::array<int, 2>& kazans,
-                        const std::array<int, 2>& tuzduks, int to_play) const {
-        return Zobrist::get_initial_hash_bitboard(board, kazans, tuzduks, to_play);
-    }
-
-    bool enter_repetition(uint64_t hash) {
-        int& count = repetitions[hash];
-        count++;
-        if (count >= 3) {
-            stats.repetition_draws++;
-            return true;
-        }
-        return false;
-    }
-
-    void leave_repetition(uint64_t hash) {
-        auto found = repetitions.find(hash);
-        if (found == repetitions.end()) return;
-        found->second--;
-        if (found->second <= 0) repetitions.erase(found);
-    }
-
     bool has_repetition_pressure() const {
-        for (const auto& item : repetitions) {
-            if (item.second > 1) return true;
+        if (history_stack.empty()) return false;
+        uint64_t current = history_stack.back();
+        int seen = 0;
+        for (int i = static_cast<int>(history_stack.size()) - 1; i >= 0; i -= 2) {
+            if (history_stack[static_cast<size_t>(i)] == current) {
+                ++seen;
+                if (seen > 1) return true;
+            }
         }
         return false;
     }
 };
 
 SearchStats last_stats;
-
-size_t reserve_hint_for_depth(int depth) {
-    size_t value = 256;
-    for (int i = 0; i < depth && value < (1u << 20); ++i) {
-        value *= 4;
-    }
-    return value;
-}
 
 MoveEval search_root(const ToguzEnv& env, int depth, const Evaluator& evaluator,
                      const Clock::time_point* deadline = nullptr,
@@ -478,9 +453,9 @@ MoveEval search_root(const ToguzEnv& env, int depth, const Evaluator& evaluator,
     int count = ToguzEnv::generate_moves_search(board, tuzduks, env.to_play, moves);
     if (count == 0) return result;
 
-    sort_moves(board, tuzduks, env.to_play, moves, count);
+    order_moves(moves, count, board, tuzduks, env.to_play, 0);
 
-    DagSearcher searcher(reserve_hint_for_depth(depth), env.repetition_counts,
+    DagSearcher searcher(DEFAULT_TT_MB, env.history_stack,
                          evaluator, deadline, timed_out);
     int best_move = moves[0];
     double best_value = -SEARCH_INF;
@@ -517,10 +492,9 @@ MoveEval search_root(const ToguzEnv& env, int depth, const Evaluator& evaluator,
                                           -beta, -alpha);
         }
         if (timed_out && *timed_out) break;
-        if (!terminal) {
-            searcher.leave_repetition(searcher.exact_hash(
-                b_tmp, k_tmp, t_tmp, next_to_play));
-        }
+            if (!terminal) {
+                searcher.leave_repetition();
+            }
 
         double value = -child_value;
         if (value > best_value) {
@@ -534,7 +508,7 @@ MoveEval search_root(const ToguzEnv& env, int depth, const Evaluator& evaluator,
         }
     }
 
-    searcher.stats.table_entries = static_cast<uint64_t>(searcher.table.size());
+    searcher.stats.table_entries = static_cast<uint64_t>(searcher.table_entries());
     last_stats = searcher.stats;
     result.move = best_move;
     result.eval = best_value;
@@ -613,7 +587,7 @@ std::vector<MoveEval> get_all_moves_with_evals(const ToguzEnv& env, int depth, c
 
     sort_moves(board, tuzduks, env.to_play, moves, count);
 
-    DagSearcher searcher(reserve_hint_for_depth(depth), env.repetition_counts,
+    DagSearcher searcher(DEFAULT_TT_MB, env.history_stack,
                          evaluator);
     std::vector<MoveEval> results;
     results.reserve(static_cast<size_t>(count));
@@ -655,8 +629,7 @@ std::vector<MoveEval> get_all_moves_with_evals(const ToguzEnv& env, int depth, c
                                           -beta, -alpha);
         }
         if (!terminal) {
-            searcher.leave_repetition(searcher.exact_hash(
-                b_tmp, k_tmp, t_tmp, next_to_play));
+            searcher.leave_repetition();
         }
 
         double value = -child_value;
@@ -675,7 +648,7 @@ std::vector<MoveEval> get_all_moves_with_evals(const ToguzEnv& env, int depth, c
         }
     }
 
-    searcher.stats.table_entries = static_cast<uint64_t>(searcher.table.size());
+    searcher.stats.table_entries = static_cast<uint64_t>(searcher.table_entries());
     last_stats = searcher.stats;
     return results;
 }

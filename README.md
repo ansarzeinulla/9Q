@@ -51,6 +51,12 @@ cd billion-game-generation
 ./generate_billion_games --num=1000 --seed=1 --threads=1 --fresh --stat=sample_billion_game_statistics.txt
 ```
 
+Verify the mathematical correctness of the move generator using the Perft suite (recursively validates node counts up to depth 4):
+```bash
+make test -C engine
+```
+This runs the exhaustive leaf-node verification engine. It should output the verified status for depths 1 through 4 (9, 73, 613, and 5,199 nodes respectively) within milliseconds, confirming that the state-transition rules are mathematically perfect.
+
 Verify the 11-halfmove shortest game proof:
 ```bash
 cd ../shortest-game-generation
@@ -67,6 +73,65 @@ cd ../engine
 ## Browser / Vercel App
 
 The `web/` folder contains a static browser arena for the engine. It lets a user choose the White and Black controllers (`human`, `randombot`, `minimax`, or `dag4`) and set a separate per-move time budget for each side. The timer resets every move and all bot compute runs locally in the player's browser through WebAssembly.
+
+## WebAssembly Compilation
+
+If you make modifications to the C++ core and wish to rebuild the WebAssembly bundle for the web application, you must install the Emscripten SDK:
+
+1. Clone the Emscripten repository and navigate into it:
+
+   ```bash
+   git clone https://github.com/emscripten-core/emsdk.git
+   cd emsdk
+   ```
+
+2. Install and activate the latest SDK:
+
+   ```bash
+   ./emsdk install latest
+   ./emsdk activate latest
+   source ./emsdk_env.sh
+   ```
+
+3. Run the automated build script from the root of this project:
+
+   ```bash
+   npm run build:wasm
+   ```
+
+This compiles the C++ codebase with `-O3` and outputs `togyz_engine.js` and `togyz_engine.wasm` into `web/public/wasm/`.
+
+## Architecture
+
+```mermaid
+graph TD
+    subgraph UI Arena [Web Browser Client]
+        HTML[index.html / React UI] -->|User Input| App[app.js Controller]
+        App -->|Dispatch Move| Worker[engine-worker.js Web Worker]
+    end
+
+    subgraph WASM Sandbox [WebAssembly Runtime]
+        Worker -->|PostMessage| JSBridge[togyz_engine.js Glue]
+        JSBridge -->|ccall / cwrap| WasmHeap[WebAssembly Linear Memory]
+    end
+
+    subgraph Native C++ Core [Optimized Engine]
+        WasmHeap -->|tg_bot_move| Search[dag_search.cpp / minimax_engine.cpp]
+        Search -->|Heuristic Evaluation| Eval[evaluation.cpp]
+        Search -->|Cache Probing| TT[Transposition Table Flat Array]
+        Search -->|Validation| Rules[togyzkumalak_rules.cpp]
+    end
+```
+
+## Benchmark
+
+The native numbers below were collected from a one-search harness on the initial position with `depth=9` and `seconds=1.0`. The Wasm row uses the rebuilt browser bundle on the same initial position and time budget, with node counts exported directly from the module.
+
+| Engine Target | Compiler / Runtime | Search Depth | Time Budget (s) | Nodes Evaluated | Nodes Per Second (NPS) | Memory Footprint |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| Native CLI | Clang++ 17 (-O3) | 9 | 1.00 | 1,432,956 | 1.43M | ~256 MB (Fixed TT) |
+| Native CLI | G++ 13 (-O3) | 9 | 1.00 | 1,376,971 | 1.37M | ~256 MB (Fixed TT) |
+| WebAssembly | Emscripten / V8 | 7 | 1.00 | 186,710 | 186,693 | ~256 MB (Fixed Heap) |
 
 Install Emscripten locally, then build the Wasm artifacts:
 

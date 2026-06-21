@@ -7,7 +7,6 @@
 #include <vector>
 #include <random>
 #include <cstdint>
-#include <unordered_map>
 
 typedef __int128_t uint128;
 
@@ -60,7 +59,7 @@ public:
     int steps;
     int winner_code;
     int max_steps;
-    std::unordered_map<uint64_t, int> repetition_counts;
+    std::vector<uint64_t> history_stack;
 
     std::vector<int> random_buffer;
     int random_idx;

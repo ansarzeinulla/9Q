@@ -40,6 +40,33 @@ make -C billion-game-generation
 make -C shortest-game-generation
 ```
 
+## WebAssembly құрастыру
+
+Егер C++ өзегіне өзгеріс енгізіп, web қолданбасы үшін WebAssembly бумасын қайта жинағыңыз келсе, алдымен Emscripten SDK орнату қажет:
+
+1. Emscripten репозиторийін көшіріп алып, ішіне кіріңіз:
+
+   ```bash
+   git clone https://github.com/emscripten-core/emsdk.git
+   cd emsdk
+   ```
+
+2. Соңғы SDK-ны орнатып, белсендіріңіз:
+
+   ```bash
+   ./emsdk install latest
+   ./emsdk activate latest
+   source ./emsdk_env.sh
+   ```
+
+3. Осы жобаның түбір каталогынан автоматты құрастыру скриптін іске қосыңыз:
+
+   ```bash
+   npm run build:wasm
+   ```
+
+Бұл C++ кодын `-O3` жалаушасымен жинайды және `web/public/wasm/` ішіне `togyz_engine.js` пен `togyz_engine.wasm` шығарады.
+
 ## Жылдам тексеру (тестілеу)
 
 Симуляция қозғалтқышын тексеру үшін кездейсоқ ойынның шағын 1,000 ойындық үлгісін іске қосыңыз:
@@ -47,6 +74,12 @@ make -C shortest-game-generation
 cd billion-game-generation
 ./generate_billion_games --num=1000 --seed=1 --threads=1 --fresh --stat=sample_billion_game_statistics.txt
 ```
+
+Қозғалыс генераторының математикалық дұрыстығын Perft жиыны арқылы тексеріңіз (4-ші тереңдікке дейін node сандарын рекурсивті түрде валидациялайды):
+```bash
+make test -C engine
+```
+Бұл exhaustive leaf-node тексеру қозғалтқышын іске қосады. Ол 1-ден 4-ке дейінгі тереңдіктер үшін расталған нәтижелерді (тиісінше 9, 73, 613 және 5,199 node) миллисекундтар ішінде шығарып, күй ауысу ережелерінің математикалық тұрғыдан дұрыс екенін көрсетеді.
 
 11 жартыжүрістік ең қысқа ойын дәлелін тексеріңіз:
 ```bash

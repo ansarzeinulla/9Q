@@ -148,23 +148,36 @@ uint64_t ToguzEnv::position_hash() const {
 }
 
 void ToguzEnv::reset_repetition_history() {
-    repetition_counts.clear();
-    repetition_counts[position_hash()] = 1;
+    history_stack.clear();
+    history_stack.reserve(256);
+    history_stack.push_back(position_hash());
 }
 
 bool ToguzEnv::record_repetition_and_check_draw() {
-    int& count = repetition_counts[position_hash()];
-    count++;
-    if (count >= 3) {
-        winner_code = -1;
-        return true;
+    uint64_t hash = position_hash();
+    history_stack.push_back(hash);
+    int seen = 0;
+    for (int i = static_cast<int>(history_stack.size()) - 1; i >= 0; i -= 2) {
+        if (history_stack[static_cast<size_t>(i)] == hash) {
+            ++seen;
+            if (seen >= 3) {
+                winner_code = -1;
+                return true;
+            }
+        }
     }
     return false;
 }
 
 int ToguzEnv::current_repetition_count() const {
-    auto found = repetition_counts.find(position_hash());
-    return found == repetition_counts.end() ? 0 : found->second;
+    uint64_t hash = position_hash();
+    int seen = 0;
+    for (int i = static_cast<int>(history_stack.size()) - 1; i >= 0; i -= 2) {
+        if (history_stack[static_cast<size_t>(i)] == hash) {
+            ++seen;
+        }
+    }
+    return seen;
 }
 
 void ToguzEnv::step_search(Bitboard& b, std::array<int, 2>& k, std::array<int, 2>& t,

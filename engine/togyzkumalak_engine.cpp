@@ -240,6 +240,7 @@ struct TimedBotResult {
   int move = -1;
   int completed_depth = 0;
   double eval = 0.0;
+  uint64_t nodes = 0;
 };
 
 TimedBotResult timed_bot_move(ToguzEnv &env, const string &kind,
@@ -262,6 +263,7 @@ TimedBotResult timed_bot_move(ToguzEnv &env, const string &kind,
     result.move = search.move;
     result.completed_depth = search.completed_depth;
     result.eval = search.eval;
+    result.nodes = dag_search::get_last_stats().nodes;
     return result;
   } else {
     throw runtime_error("Unsupported bot kind: " + kind);
@@ -646,7 +648,7 @@ struct StartPosition {
   int winner_code = -2;
   int max_steps = 10000;
   int reduction = 0;
-  unordered_map<uint64_t, int> repetition_counts;
+  vector<uint64_t> history_stack;
 };
 
 StartPosition capture_start_position(const ToguzEnv &env, int reduction) {
@@ -659,7 +661,7 @@ StartPosition capture_start_position(const ToguzEnv &env, int reduction) {
   start.winner_code = env.winner_code;
   start.max_steps = env.max_steps;
   start.reduction = reduction;
-  start.repetition_counts = env.repetition_counts;
+  start.history_stack = env.history_stack;
   return start;
 }
 
@@ -671,7 +673,7 @@ void apply_start_position(ToguzEnv &env, const StartPosition &start) {
   env.steps = start.steps;
   env.winner_code = start.winner_code;
   env.max_steps = start.max_steps;
-  env.repetition_counts = start.repetition_counts;
+  env.history_stack = start.history_stack;
 }
 
 vector<StartPosition> make_balanced_start_positions(const Args &args) {
@@ -770,6 +772,7 @@ struct TimingStats {
   int repetition_draws = 0;
   long long moves = 0;
   long long total_reduction = 0;
+  unsigned long long nodes = 0;
   int min_moves = 0;
   int max_moves = 0;
   double seconds = 0.0;
@@ -812,6 +815,7 @@ TimingStats run_selfplay_timing_range(const vector<StartPosition> &starts,
       TimedBotResult timed = timed_bot_move(env, kind, move_time_seconds,
                                             depth,
                                             *evaluators[env.to_play]);
+      stats.nodes += timed.nodes;
       int move = timed.move;
       if (move == -1)
         break;
@@ -956,6 +960,9 @@ void print_timing_stats(const TimingStats &stats) {
        << "  ms/move: " << fixed << setprecision(3) << ms_per_move
        << "  avg moves/game: " << fixed << setprecision(1) << avg_moves
        << "\n";
+  double nps = stats.seconds > 0.0 ? (double)stats.nodes / stats.seconds : 0.0;
+  cout << "nodes: " << stats.nodes << "  nps: " << fixed << setprecision(0)
+       << nps << "\n";
   cout << "P1 wins: " << stats.p1_wins << "  P2 wins: " << stats.p2_wins
        << "  draws: " << stats.draws
        << "  repetition draws: " << stats.repetition_draws

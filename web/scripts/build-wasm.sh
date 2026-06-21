@@ -49,7 +49,7 @@ emcc \
   -sMALLOC=emmalloc \
   -sFILESYSTEM=0 \
   -sNO_EXIT_RUNTIME=1 \
-  -sEXPORTED_FUNCTIONS='["_tg_version","_tg_reset","_tg_state_json","_tg_fen_string","_tg_last_error","_tg_last_bot_json","_tg_last_move_json","_tg_set_fen","_tg_make_move","_tg_bot_move"]' \
+  -sEXPORTED_FUNCTIONS='["_tg_version","_tg_init_engine","_tg_reset","_tg_state_json","_tg_fen_string","_tg_last_error","_tg_last_bot_json","_tg_last_move_json","_tg_get_last_search_stats","_tg_set_fen","_tg_make_move","_tg_bot_move"]' \
   -sEXPORTED_RUNTIME_METHODS='["ccall","UTF8ToString"]' \
   -o web/public/wasm/togyz_engine.js
 

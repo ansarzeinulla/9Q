@@ -28,6 +28,12 @@ struct TTEntry {
     double value = 0.0;
     int depth = -1;
     int perspective = -1;
+    uint8_t best_move = 0;
+};
+
+struct ScoredMove {
+    int move = -1;
+    int score = 0;
 };
 
 static std::vector<TTEntry>& transposition_table() {
@@ -85,6 +91,25 @@ void sort_moves_in_place(const Bitboard& b, int player, std::array<int, 9>& move
             }
         }
         std::swap(moves[i], moves[best_idx]);
+    }
+}
+
+void order_moves(std::array<int, 9>& moves, int count, const Bitboard& b, int player,
+                 uint8_t tt_best_move) {
+    std::array<ScoredMove, 9> scored{};
+    for (int i = 0; i < count; ++i) {
+        int move = moves[i];
+        int score = (static_cast<uint8_t>(move) == tt_best_move) ? 100000
+                                                                 : (1000 - move_order_key(b, player, move));
+        scored[static_cast<size_t>(i)] = {move, score};
+    }
+    std::sort(scored.begin(), scored.begin() + count,
+              [](const ScoredMove& a, const ScoredMove& b) {
+                  if (a.score != b.score) return a.score > b.score;
+                  return a.move < b.move;
+              });
+    for (int i = 0; i < count; ++i) {
+        moves[static_cast<size_t>(i)] = scored[static_cast<size_t>(i)].move;
     }
 }
 
@@ -177,10 +202,12 @@ double minimax_raw(Bitboard& board, std::array<int, 2>& kazans, std::array<int, 
     uint64_t evaluator_key = evaluator.cache_key();
     int tt_idx = current_hash & (TT_SIZE - 1);
     auto& tt = transposition_table();
+    uint8_t tt_best_move = 0;
     if (tt[tt_idx].hash == current_hash &&
         tt[tt_idx].evaluator_key == evaluator_key &&
         tt[tt_idx].perspective == perspective_player &&
         tt[tt_idx].depth >= depth) {
+        tt_best_move = tt[tt_idx].best_move;
         return tt[tt_idx].value;
     }
 
@@ -195,12 +222,14 @@ double minimax_raw(Bitboard& board, std::array<int, 2>& kazans, std::array<int, 
                                          evaluator);
     
     // Sort moves to improve Alpha-Beta pruning
-    if (depth >= 1) sort_moves_in_place(board, to_play_idx, moves, count);
+    order_moves(moves, count, board, to_play_idx, tt_best_move);
 
     history_board[depth] = board;
     history_kazans[depth] = kazans;
     history_tuzduks[depth] = tuzduks;
     int ot = to_play_idx, os = steps, ow = winner_code;
+
+    int node_best_move = tt_best_move;
 
     if (maximizing_player) {
         double value = -10000000.0;
@@ -209,11 +238,15 @@ double minimax_raw(Bitboard& board, std::array<int, 2>& kazans, std::array<int, 
             ToguzEnv::step_search(board, kazans, tuzduks, moves[i], to_play_idx, ns, max_steps, nw, np, term, next_h);
             double res = minimax_raw(board, kazans, tuzduks, np, ns, max_steps, nw, depth - 1, alpha, beta, false, perspective_player, history_board, history_kazans, history_tuzduks, history_moves, next_h, evaluator);
             board = history_board[depth]; kazans = history_kazans[depth]; tuzduks = history_tuzduks[depth]; to_play_idx = ot; steps = os; winner_code = ow;
-            if (res > value) value = res;
+            if (res > value) {
+                value = res;
+                node_best_move = moves[i];
+            }
             if (value > alpha) alpha = value;
             if (beta <= alpha) break;
         }
-        tt[tt_idx] = {current_hash, evaluator_key, value, depth, perspective_player};
+        tt[tt_idx] = {current_hash, evaluator_key, value, depth, perspective_player,
+                      static_cast<uint8_t>(node_best_move)};
         return value;
     } else {
         double value = 10000000.0;
@@ -222,11 +255,15 @@ double minimax_raw(Bitboard& board, std::array<int, 2>& kazans, std::array<int, 
             ToguzEnv::step_search(board, kazans, tuzduks, moves[i], to_play_idx, ns, max_steps, nw, np, term, next_h);
             double res = minimax_raw(board, kazans, tuzduks, np, ns, max_steps, nw, depth - 1, alpha, beta, true, perspective_player, history_board, history_kazans, history_tuzduks, history_moves, next_h, evaluator);
             board = history_board[depth]; kazans = history_kazans[depth]; tuzduks = history_tuzduks[depth]; to_play_idx = ot; steps = os; winner_code = ow;
-            if (res < value) value = res;
+            if (res < value) {
+                value = res;
+                node_best_move = moves[i];
+            }
             if (value < beta) beta = value;
             if (beta <= alpha) break;
         }
-        tt[tt_idx] = {current_hash, evaluator_key, value, depth, perspective_player};
+        tt[tt_idx] = {current_hash, evaluator_key, value, depth, perspective_player,
+                      static_cast<uint8_t>(node_best_move)};
         return value;
     }
 }
@@ -367,10 +404,12 @@ double minimax_raw_timed(Bitboard& board, std::array<int, 2>& kazans,
     uint64_t evaluator_key = evaluator.cache_key();
     int tt_idx = current_hash & (TT_SIZE - 1);
     auto& tt = transposition_table();
+    uint8_t tt_best_move = 0;
     if (tt[tt_idx].hash == current_hash &&
         tt[tt_idx].evaluator_key == evaluator_key &&
         tt[tt_idx].perspective == perspective_player &&
         tt[tt_idx].depth >= depth) {
+        tt_best_move = tt[tt_idx].best_move;
         return tt[tt_idx].value;
     }
 
@@ -388,12 +427,14 @@ double minimax_raw_timed(Bitboard& board, std::array<int, 2>& kazans,
                              false, perspective_player, evaluator);
     }
 
-    sort_moves_in_place(board, to_play_idx, moves, count);
+    order_moves(moves, count, board, to_play_idx, tt_best_move);
 
     history_board[depth] = board;
     history_kazans[depth] = kazans;
     history_tuzduks[depth] = tuzduks;
     int ot = to_play_idx, os = steps, ow = winner_code;
+
+    int node_best_move = tt_best_move;
 
     if (maximizing_player) {
         double value = -10000000.0;
@@ -421,13 +462,16 @@ double minimax_raw_timed(Bitboard& board, std::array<int, 2>& kazans,
             steps = os;
             winner_code = ow;
             if (timed_out) break;
-            if (res > value) value = res;
+            if (res > value) {
+                value = res;
+                node_best_move = moves[i];
+            }
             if (value > alpha) alpha = value;
             if (beta <= alpha) break;
         }
         if (!timed_out) {
             tt[tt_idx] = {current_hash, evaluator_key, value, depth,
-                          perspective_player};
+                          perspective_player, static_cast<uint8_t>(node_best_move)};
         }
         return value;
     }
@@ -456,13 +500,16 @@ double minimax_raw_timed(Bitboard& board, std::array<int, 2>& kazans,
         steps = os;
         winner_code = ow;
         if (timed_out) break;
-        if (res < value) value = res;
+        if (res < value) {
+            value = res;
+            node_best_move = moves[i];
+        }
         if (value < beta) beta = value;
         if (beta <= alpha) break;
     }
     if (!timed_out) {
         tt[tt_idx] = {current_hash, evaluator_key, value, depth,
-                      perspective_player};
+                      perspective_player, static_cast<uint8_t>(node_best_move)};
     }
     return value;
 }
@@ -482,7 +529,7 @@ TimedMoveResult search_depth_timed(const ToguzEnv& env, int depth,
     std::array<int, 9> moves;
     int count = ToguzEnv::generate_moves_search(b, t, env.to_play, moves);
     if (count == 0) return result;
-    sort_moves_in_place(b, env.to_play, moves, count);
+    order_moves(moves, count, b, env.to_play, 0);
 
     result.move = moves[0];
     result.eval = -10000000.0;
@@ -544,7 +591,7 @@ int get_best_move(const ToguzEnv& env, int depth, const Evaluator& evaluator) {
     std::array<int, 9> moves;
     int count = ToguzEnv::generate_moves_search(b, t, env.to_play, moves);
     if (count == 0) return -1;
-    sort_moves_in_place(b, env.to_play, moves, count);
+    order_moves(moves, count, b, env.to_play, 0);
 
     int best_move = moves[0];
     double best_val = -10000000.0;
@@ -583,7 +630,7 @@ TimedMoveResult get_best_move_timed(const ToguzEnv& env, double seconds_per_move
                                                 env.to_play, moves);
     if (count == 0) return best;
 
-    sort_moves_in_place(env.board, env.to_play, moves, count);
+    order_moves(moves, count, env.board, env.to_play, 0);
     best.move = moves[0];
     best.timed_out = true;
 
@@ -632,7 +679,7 @@ std::vector<MoveEval> get_all_moves_with_evals(const ToguzEnv& env, int depth, c
     std::array<int, 9> moves;
     int count = ToguzEnv::generate_moves_search(b, t, env.to_play, moves);
     if (count == 0) return {};
-    sort_moves_in_place(b, env.to_play, moves, count);
+    order_moves(moves, count, b, env.to_play, 0);
 
     std::vector<MoveEval> results;
     double alpha = -10000000.0;

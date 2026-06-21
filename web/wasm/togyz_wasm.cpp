@@ -27,6 +27,8 @@ std::string fen_cache;
 std::string error_cache;
 std::string bot_cache = "{\"move\":-1,\"bot\":\"none\",\"elapsedMs\":0,\"completedDepth\":0,\"eval\":0,\"status\":\"idle\"}";
 std::string move_cache = "{\"move\":-1,\"landingPit\":-1,\"notation\":\"\",\"suffix\":\"\",\"captured\":false,\"tuzdyk\":false,\"side\":\"\"}";
+std::string search_stats_cache = "{\"bot\":\"none\",\"elapsedMs\":0,\"nodes\":0,\"ttHits\":0,\"ttStores\":0,\"repetitionDraws\":0}";
+size_t current_tt_mb = 256;
 
 std::string lower_copy(const char* value) {
     std::string result = value == nullptr ? "" : value;
@@ -383,9 +385,35 @@ std::string make_bot_json(const std::string& bot, const BotResult& result, doubl
     return out.str();
 }
 
+std::string make_search_stats_json(const std::string& bot, int completed_depth, double elapsed_ms) {
+    dag_search::SearchStats stats = dag_search::get_last_stats();
+    double elapsed_seconds = elapsed_ms / 1000.0;
+    double nps = elapsed_seconds > 0.0 ? static_cast<double>(stats.nodes) / elapsed_seconds : 0.0;
+    std::ostringstream out;
+    out << "{";
+    out << "\"bot\":\"" << bot << "\",";
+    out << "\"elapsedMs\":" << elapsed_ms << ",";
+    out << "\"depth\":" << completed_depth << ",";
+    out << "\"nodes\":" << stats.nodes << ",";
+    out << "\"ttHits\":" << stats.tt_hits << ",";
+    out << "\"ttStores\":" << stats.tt_stores << ",";
+    out << "\"repetitionDraws\":" << stats.repetition_draws << ",";
+    out << "\"nps\":" << static_cast<uint64_t>(nps);
+    out << "}";
+    return out.str();
+}
+
 } // namespace
 
 extern "C" {
+
+EMSCRIPTEN_KEEPALIVE
+void tg_init_engine(int tt_size_mb) {
+    if (tt_size_mb < 4) tt_size_mb = 4;
+    if (tt_size_mb > 512) tt_size_mb = 512;
+    current_tt_mb = static_cast<size_t>(tt_size_mb);
+    dag_search::init_tt(current_tt_mb);
+}
 
 EMSCRIPTEN_KEEPALIVE
 const char* tg_version() {
@@ -428,6 +456,11 @@ const char* tg_last_move_json() {
 }
 
 EMSCRIPTEN_KEEPALIVE
+const char* tg_get_last_search_stats() {
+    return search_stats_cache.c_str();
+}
+
+EMSCRIPTEN_KEEPALIVE
 int tg_set_fen(const char* fen) {
     bool ok = apply_fen(fen == nullptr ? "" : fen);
     if (!ok) {
@@ -465,6 +498,7 @@ int tg_bot_move(const char* bot_name, double seconds_per_move) {
     } else {
         move_cache = "{\"move\":-1,\"landingPit\":-1,\"notation\":\"\",\"suffix\":\"\",\"captured\":false,\"tuzdyk\":false,\"side\":\"\"}";
     }
+    search_stats_cache = make_search_stats_json(bot, result.completed_depth, elapsed_ms);
     bot_cache = make_bot_json(bot, result, elapsed_ms);
     return result.move;
 }

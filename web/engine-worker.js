@@ -34,6 +34,10 @@ self.addEventListener("message", async (event) => {
     let response;
 
     if (type === "init") {
+      const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(
+        typeof navigator !== "undefined" ? navigator.userAgent : ""
+      );
+      Module.ccall("tg_init_engine", null, ["number"], [payload?.ttMb || (isMobile ? 64 : 256)]);
       response = {
         version: readString(Module, "_tg_version"),
         state: readJson(Module, "_tg_state_json"),
@@ -66,10 +70,12 @@ self.addEventListener("message", async (event) => {
         fen: readString(Module, "_tg_fen_string")
       };
     } else if (type === "botMove") {
-      Module.ccall("tg_bot_move", "number", ["string", "number"], [payload.player, payload.seconds]);
+      const move = Module.ccall("tg_bot_move", "number", ["string", "number"], [payload.player, payload.seconds]);
+      const stats = readJson(Module, "_tg_get_last_search_stats");
       response = {
         bot: readJson(Module, "_tg_last_bot_json"),
         move: readJson(Module, "_tg_last_move_json"),
+        stats,
         state: readJson(Module, "_tg_state_json"),
         fen: readString(Module, "_tg_fen_string")
       };
