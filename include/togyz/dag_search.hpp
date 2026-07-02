@@ -1,8 +1,8 @@
 #ifndef DAG_SEARCH_HPP
 #define DAG_SEARCH_HPP
 
-#include "evaluation.hpp"
-#include "togyzkumalak_rules.hpp"
+#include "togyz/evaluation.hpp"
+#include "togyz/togyzkumalak_rules.hpp"
 #include <cstdint>
 #include <algorithm>
 #include <memory>

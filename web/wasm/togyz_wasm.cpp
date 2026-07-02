@@ -1,7 +1,7 @@
-#include "../../engine/dag_search.hpp"
-#include "../../engine/evaluation.hpp"
-#include "../../engine/minimax_engine.hpp"
-#include "../../engine/togyzkumalak_rules.hpp"
+#include "togyz/dag_search.hpp"
+#include "togyz/evaluation.hpp"
+#include "togyz/minimax_engine.hpp"
+#include "togyz/togyzkumalak_rules.hpp"
 
 #include <algorithm>
 #include <array>

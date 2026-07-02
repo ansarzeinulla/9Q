@@ -1,4 +1,4 @@
-#include "../engine/togyzkumalak_rules.hpp"
+#include "togyz/togyzkumalak_rules.hpp"
 
 #include <algorithm>
 #include <array>

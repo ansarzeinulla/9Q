@@ -5,14 +5,12 @@ dist/
 limit.txt
 tests/rules_test
 
-engine/*.o
-engine/togyzkumalak_engine
-billion-game-generation/*.o
-billion-game-generation/generate_billion_games
-shortest-game-generation/*.o
-shortest-game-generation/find_shortest_game
+build/
 *.o
-engine/togyzkumalak_engine
-billion-game-generation/generate_billion_games
-shortest-game-generation/find_shortest_game
+*.a
+tg_engine
+tg_billion_sim
+tg_shortest_solver
+perft_test
 emsdk/
+.emsdk/

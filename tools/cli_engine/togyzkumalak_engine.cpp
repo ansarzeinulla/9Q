@@ -1,8 +1,8 @@
-#include "minimax_engine.hpp"
-#include "dag_search.hpp"
-#include "evaluation.hpp"
-#include "togyzkumalak_rules.hpp"
-#include "position_hash.hpp"
+#include "togyz/minimax_engine.hpp"
+#include "togyz/dag_search.hpp"
+#include "togyz/evaluation.hpp"
+#include "togyz/togyzkumalak_rules.hpp"
+#include "togyz/position_hash.hpp"
 #include <algorithm>
 #include <array>
 #include <atomic>

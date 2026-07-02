@@ -1,4 +1,4 @@
-#include "position_hash.hpp"
+#include "togyz/position_hash.hpp"
 
 uint64_t Zobrist::board_p1[9][256];
 uint64_t Zobrist::board_p2[9][256];

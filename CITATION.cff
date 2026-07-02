@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this software, the Togyzkumalak engine, or the 1-Billion Game Dataset in your research, please cite it as below."
+authors:
+  - family-names: "Zeinulla"
+    given-names: "Ansar"
+title: "Combinatorial State-Space and Empirical Game Tree Complexity of Togyzkumalak: A Billion-Game Analysis"
+version: 1.1.0
+date-released: 2026-07-02
+url: "https://github.com/ansarzeinulla/9Q"
+preferred-citation:
+  type: article
+  authors:
+    - family-names: "Zeinulla"
+      given-names: "Ansar"
+  title: "Combinatorial State-Space and Empirical Game Tree Complexity of Togyzkumalak: A Billion-Game Analysis"
+  journal: "arXiv preprint arXiv:XXXX.XXXXX" # Update when you have the ArXiv ID
+  year: 2026

@@ -1,8 +1,8 @@
 #ifndef MINIMAX_ENGINE_HPP
 #define MINIMAX_ENGINE_HPP
 
-#include "evaluation.hpp"
-#include "togyzkumalak_rules.hpp"
+#include "togyz/evaluation.hpp"
+#include "togyz/togyzkumalak_rules.hpp"
 #include <vector>
 
 namespace minimax_engine {

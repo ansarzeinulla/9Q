@@ -32,9 +32,8 @@ jobs:
     # We manually compile each subdirectory so CodeQL can trace the clang++ compiler calls
     - name: Custom Build for CodeQL Tracing
       run: |
-        make -C engine CXX=clang++
-        make -C billion-game-generation CXX=clang++
-        make -C shortest-game-generation CXX=clang++
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        cmake --build build -j 4
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3

@@ -1,4 +1,4 @@
-#include "togyzkumalak_rules.hpp"
+#include "togyz/togyzkumalak_rules.hpp"
 
 #include <chrono>
 #include <cstdlib>

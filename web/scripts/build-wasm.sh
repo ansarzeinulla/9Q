@@ -29,12 +29,13 @@ fi
 mkdir -p web/public/wasm
 
 emcc \
-  engine/togyzkumalak_rules.cpp \
-  engine/position_hash.cpp \
-  engine/evaluation.cpp \
-  engine/minimax_engine.cpp \
-  engine/dag_search.cpp \
+  src/togyzkumalak_rules.cpp \
+  src/position_hash.cpp \
+  src/evaluation.cpp \
+  src/minimax_engine.cpp \
+  src/dag_search.cpp \
   web/wasm/togyz_wasm.cpp \
+  -Iinclude \
   -std=c++17 \
   -O3 \
   -DNDEBUG \

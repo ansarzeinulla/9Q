@@ -1,5 +1,5 @@
-#include "minimax_engine.hpp"
-#include "position_hash.hpp"
+#include "togyz/minimax_engine.hpp"
+#include "togyz/position_hash.hpp"
 #include <algorithm>
 #include <chrono>
 #include <limits>

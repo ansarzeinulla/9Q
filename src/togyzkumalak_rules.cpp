@@ -1,5 +1,5 @@
-#include "togyzkumalak_rules.hpp"
-#include "position_hash.hpp"
+#include "togyz/togyzkumalak_rules.hpp"
+#include "togyz/position_hash.hpp"
 #include <algorithm>
 #include <iomanip>
 

@@ -1,5 +1,5 @@
-#include "dag_search.hpp"
-#include "position_hash.hpp"
+#include "togyz/dag_search.hpp"
+#include "togyz/position_hash.hpp"
 #include <algorithm>
 #include <array>
 #include <chrono>

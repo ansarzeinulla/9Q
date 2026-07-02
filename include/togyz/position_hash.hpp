@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <array>
 #include <random>
-#include "togyzkumalak_rules.hpp"
+#include "togyz/togyzkumalak_rules.hpp"
 
 // Zobrist hashing gives each position a stable 64-bit key for repetition
 // detection and transposition-table lookup.

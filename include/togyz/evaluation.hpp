@@ -1,7 +1,7 @@
 #ifndef EVALUATION_HPP
 #define EVALUATION_HPP
 
-#include "togyzkumalak_rules.hpp"
+#include "togyz/togyzkumalak_rules.hpp"
 #include <array>
 #include <cstdint>
 #include <string>

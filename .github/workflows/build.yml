@@ -1,0 +1,47 @@
+name: Core C++ Engine Matrix Build & Perft
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  release:
+    types: [created]
+
+jobs:
+  build-and-test:
+    name: Build & Verify on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        build_type: [Release]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: '3.25.x'
+
+    - name: Configure CMake
+      run: >
+        cmake -B ${{github.workspace}}/build
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+
+    - name: Build Core & Tools
+      # Use maximum available cores for parallel compilation
+      run: cmake --build ${{github.workspace}}/build --config ${{ matrix.build_type }} -j 4
+
+    - name: Run Perft Mathematical Verification (Depth 1-4)
+      working-directory: ${{github.workspace}}/build
+      run: ./perft_test
+
+    - name: Upload Binary Artifacts (On Release)
+      if: github.event_name == 'release'
+      uses: actions/upload-artifact@v4
+      with:
+        name: togyz-engine-${{ matrix.os }}
+        path: ${{github.workspace}}/build/tg_engine
