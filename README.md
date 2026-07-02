@@ -4,7 +4,7 @@
 
 **🎮 [Play against the C++ WebAssembly Engine directly in your browser!](https://9qumalaq.vercel.app/)**
 
-[![CI/CD Pipeline](https://github.com/ansarzeinulla/9Q/actions/workflows/ci.yml/badge.svg)](https://github.com/ansarzeinulla/9Q/actions)
+[![CI/CD Pipeline](https://github.com/ansarzeinulla/9Q/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/ansarzeinulla/9Q/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![C++17](https://img.shields.io/badge/C++-17-blue.svg)](https://isocpp.org/)
 
