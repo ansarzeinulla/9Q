@@ -31,8 +31,20 @@ jobs:
         sudo apt-get install -y doxygen graphviz
 
     - name: Generate Documentation
+      # This physically modifies the Doxyfile to ensure OUTPUT_DIRECTORY is set to docs
       run: |
-        (cat Doxyfile; echo "OUTPUT_DIRECTORY = docs") | doxygen -
+        sed -i 's|^OUTPUT_DIRECTORY.*|OUTPUT_DIRECTORY = docs|g' Doxyfile
+        doxygen Doxyfile
+
+    - name: Verify Generated Files
+      # This prints the directory structure to the GitHub log so we can inspect it
+      run: |
+        echo "=== Root Directory ==="
+        ls -la
+        echo "=== Docs Directory ==="
+        ls -la docs || true
+        echo "=== Docs/HTML Directory ==="
+        ls -la docs/html || true
 
     - name: Setup Pages
       uses: actions/configure-pages@v5
@@ -42,7 +54,7 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        path: 'docs/html'
+        path: 'docs/html' # This must match where index.html was found in Step 1
 
   deploy-docs:
     environment:
