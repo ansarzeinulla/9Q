@@ -1,6 +1,6 @@
 {
   "name": "@ansarzeinulla/togyz-wasm",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "High-performance Togyzkumalak WebAssembly engine",
   "main": "web/public/wasm/togyz_engine.js",
   "publishConfig": {

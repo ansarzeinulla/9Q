@@ -3,7 +3,7 @@
   "cleanUrls": true,
   "headers": [
     {
-      "source": "/public/wasm/(.*)",
+      "source": "/wasm/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
       ]
@@ -13,7 +13,6 @@
     { "source": "/", "destination": "/game.html" },
     { "source": "/game", "destination": "/game.html" },
     { "source": "/analysis", "destination": "/analysis.html" },
-    { "source": "/togyzkumalak-pgn", "destination": "/analysis.html" },
-    { "source": "/wasm/(.*)", "destination": "/public/wasm/$1" }
+    { "source": "/togyzkumalak-pgn", "destination": "/analysis.html" }
   ]
 }
