@@ -1,8 +1,9 @@
-#include "togyz/position_hash.hpp"
-#include "togyz/togyzkumalak_rules.hpp"
+#include <gtest/gtest.h>
 
 #include <array>
-#include <gtest/gtest.h>
+
+#include "togyz/position_hash.hpp"
+#include "togyz/togyzkumalak_rules.hpp"
 
 TEST(ZobristHashTest, DeterminismAndInitialization) {
   Zobrist::init();

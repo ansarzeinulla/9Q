@@ -1,6 +1,6 @@
-#include "togyz/dag_search.hpp"
-
 #include <gtest/gtest.h>
+
+#include "togyz/dag_search.hpp"
 
 TEST(TTEvictionTest, BasicStoreAndProbe) {
   dag_search::TranspositionTable tt(4);  // 4 MB table

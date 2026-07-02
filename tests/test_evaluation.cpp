@@ -1,8 +1,9 @@
-#include "togyz/evaluation.hpp"
-#include "togyz/togyzkumalak_rules.hpp"
+#include <gtest/gtest.h>
 
 #include <array>
-#include <gtest/gtest.h>
+
+#include "togyz/evaluation.hpp"
+#include "togyz/togyzkumalak_rules.hpp"
 
 TEST(EvaluationTest, BasicHeuristicEvaluation) {
   HeuristicEvaluator eval;
@@ -36,8 +37,7 @@ TEST(EvaluationTest, BasicHeuristicEvaluation) {
   EXPECT_GT(score_p1_ahead, 10.0);
 
   // From P2's perspective, the score should be negative when P1 is ahead.
-  BoardState state_p2_perspective{
-      board, kazans_p1_ahead, tuzduks, PLAYER_1, -2, PLAYER_2, false};
+  BoardState state_p2_perspective{board, kazans_p1_ahead, tuzduks, PLAYER_1, -2, PLAYER_2, false};
   double score_p2_perspective = eval.evaluate_position(state_p2_perspective);
   EXPECT_LT(score_p2_perspective, -10.0);
 }

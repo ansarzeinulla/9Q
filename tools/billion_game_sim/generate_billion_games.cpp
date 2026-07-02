@@ -1,5 +1,3 @@
-#include "togyz/togyzkumalak_rules.hpp"
-
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -15,6 +13,8 @@
 #include <string>
 #include <thread>
 #include <vector>
+
+#include "togyz/togyzkumalak_rules.hpp"
 
 namespace fs = std::filesystem;
 
@@ -84,12 +84,9 @@ struct Stats {
   uint64_t feature_min_moves_to_win = 0;
   uint64_t feature_max_moves = 0;
 
-  std::array<std::array<uint64_t, OUTCOME_COUNT>, TUZDYK_STATE_COUNT>
-      tuzdykStateOutcome{};
-  std::array<std::array<uint64_t, OUTCOME_COUNT>, KUMALAK_POS_COUNT>
-      whiteTuzdykPosOutcome{};
-  std::array<std::array<uint64_t, OUTCOME_COUNT>, KUMALAK_POS_COUNT>
-      blackTuzdykPosOutcome{};
+  std::array<std::array<uint64_t, OUTCOME_COUNT>, TUZDYK_STATE_COUNT> tuzdykStateOutcome{};
+  std::array<std::array<uint64_t, OUTCOME_COUNT>, KUMALAK_POS_COUNT> whiteTuzdykPosOutcome{};
+  std::array<std::array<uint64_t, OUTCOME_COUNT>, KUMALAK_POS_COUNT> blackTuzdykPosOutcome{};
   std::array<uint64_t, KUMALAK_POS_COUNT> whiteTuzdykYield{};
   std::array<uint64_t, KUMALAK_POS_COUNT> blackTuzdykYield{};
   std::array<uint64_t, 2> tuzdykBlockedBySymmetry{};
@@ -97,10 +94,8 @@ struct Stats {
   std::array<uint64_t, TRACKED_MOVE_LIMIT + 1> blackTuzdykCreatedAtMove{};
   std::array<uint64_t, 2> tuzdykCreatedAtMoveOverflow{};
 
-  std::array<std::array<uint64_t, OUTCOME_COUNT>, LEGAL_POS_COUNT>
-      whiteFirstMoveOutcome{};
-  std::array<std::array<uint64_t, OUTCOME_COUNT>, OPENING_PAIR_COUNT>
-      openingPairOutcome{};
+  std::array<std::array<uint64_t, OUTCOME_COUNT>, LEGAL_POS_COUNT> whiteFirstMoveOutcome{};
+  std::array<std::array<uint64_t, OUTCOME_COUNT>, OPENING_PAIR_COUNT> openingPairOutcome{};
 
   std::array<std::array<uint64_t, OUTCOME_COUNT>, 2> atsyrauByPlayerOutcome{};
   std::array<uint64_t, 2> atsyrauOpponentCaptureSum{};
@@ -118,20 +113,14 @@ struct Stats {
   std::array<uint64_t, BRANCHING_BAND_COUNT> branchingPositions{};
   std::array<uint64_t, BRANCHING_BAND_COUNT> branchingLegalMoveSum{};
   uint64_t exactMoveTrackedGames = 0;
-  std::vector<uint64_t> branchingExactMovePositions =
-      std::vector<uint64_t>(TRACKED_MOVE_LIMIT + 1);
+  std::vector<uint64_t> branchingExactMovePositions = std::vector<uint64_t>(TRACKED_MOVE_LIMIT + 1);
   std::vector<uint64_t> branchingExactMoveLegalMoveSum =
       std::vector<uint64_t>(TRACKED_MOVE_LIMIT + 1);
-  std::vector<uint64_t> whiteSideKumalakSumAtMove =
-      std::vector<uint64_t>(TRACKED_MOVE_LIMIT + 1);
-  std::vector<uint64_t> blackSideKumalakSumAtMove =
-      std::vector<uint64_t>(TRACKED_MOVE_LIMIT + 1);
-  std::vector<uint64_t> totalSideKumalakSumAtMove =
-      std::vector<uint64_t>(TRACKED_MOVE_LIMIT + 1);
-  std::vector<uint64_t> whiteKazanSumAtMove =
-      std::vector<uint64_t>(TRACKED_MOVE_LIMIT + 1);
-  std::vector<uint64_t> blackKazanSumAtMove =
-      std::vector<uint64_t>(TRACKED_MOVE_LIMIT + 1);
+  std::vector<uint64_t> whiteSideKumalakSumAtMove = std::vector<uint64_t>(TRACKED_MOVE_LIMIT + 1);
+  std::vector<uint64_t> blackSideKumalakSumAtMove = std::vector<uint64_t>(TRACKED_MOVE_LIMIT + 1);
+  std::vector<uint64_t> totalSideKumalakSumAtMove = std::vector<uint64_t>(TRACKED_MOVE_LIMIT + 1);
+  std::vector<uint64_t> whiteKazanSumAtMove = std::vector<uint64_t>(TRACKED_MOVE_LIMIT + 1);
+  std::vector<uint64_t> blackKazanSumAtMove = std::vector<uint64_t>(TRACKED_MOVE_LIMIT + 1);
   uint64_t branchingExactMovePositionsOverflow = 0;
   uint64_t branchingExactMoveLegalMoveSumOverflow = 0;
   uint64_t whiteSideKumalakSumAtMoveOverflow = 0;
@@ -141,8 +130,7 @@ struct Stats {
   uint64_t blackKazanSumAtMoveOverflow = 0;
   uint64_t max_capture_single_turn = 0;
 
-  std::array<std::array<uint64_t, OUTCOME_COUNT>, 2>
-      officialAtsyrauByPlayerOutcome{};
+  std::array<std::array<uint64_t, OUTCOME_COUNT>, 2> officialAtsyrauByPlayerOutcome{};
   std::array<uint64_t, 2> officialAtsyrauOpponentCaptureSum{};
   std::array<uint64_t, 2> officialAtsyrauFacedKazanSum{};
   std::array<uint64_t, 2> officialAtsyrauOpponentKazanSum{};
@@ -150,8 +138,7 @@ struct Stats {
   std::array<uint64_t, 2> officialAtsyrauFacedEqual81{};
   std::array<uint64_t, 2> officialAtsyrauFacedGreater81{};
 
-  std::array<std::array<uint64_t, OUTCOME_COUNT>, 2>
-      noLegalAfterScoreWinByPlayerOutcome{};
+  std::array<std::array<uint64_t, OUTCOME_COUNT>, 2> noLegalAfterScoreWinByPlayerOutcome{};
   std::array<std::array<uint64_t, OUTCOME_COUNT>, 3> terminalCauseOutcome{};
 };
 
@@ -187,14 +174,11 @@ struct SplitMix64 {
 
   // SplitMix64 is fast, deterministic, and cheap to split into independent
   // worker streams. That matters more here than cryptographic randomness.
-  inline uint64_t next() {
-    return splitmix64_mix(state += SPLITMIX_GAMMA);
-  }
+  inline uint64_t next() { return splitmix64_mix(state += SPLITMIX_GAMMA); }
 
   inline int bounded(int bound) {
-    return static_cast<int>(
-        (static_cast<__uint128_t>(next()) * static_cast<uint64_t>(bound)) >>
-        64);
+    return static_cast<int>((static_cast<__uint128_t>(next()) * static_cast<uint64_t>(bound)) >>
+                            64);
   }
 };
 
@@ -217,8 +201,7 @@ struct PrecomputedRng {
       idx = 0;
     }
     uint64_t raw = values[idx++];
-    return static_cast<int>(
-        (static_cast<__uint128_t>(raw) * static_cast<uint64_t>(bound)) >> 64);
+    return static_cast<int>((static_cast<__uint128_t>(raw) * static_cast<uint64_t>(bound)) >> 64);
   }
 };
 
@@ -242,11 +225,11 @@ struct FastState {
   }
 };
 
-static bool has_prefix(const std::string &s, const std::string &prefix) {
+static bool has_prefix(const std::string& s, const std::string& prefix) {
   return s.rfind(prefix, 0) == 0;
 }
 
-static uint64_t parse_u64(const std::string &raw, const std::string &name) {
+static uint64_t parse_u64(const std::string& raw, const std::string& name) {
   size_t used = 0;
   uint64_t value = std::stoull(raw, &used);
   if (used != raw.size()) {
@@ -255,7 +238,7 @@ static uint64_t parse_u64(const std::string &raw, const std::string &name) {
   return value;
 }
 
-static int parse_int(const std::string &raw, const std::string &name) {
+static int parse_int(const std::string& raw, const std::string& name) {
   size_t used = 0;
   int value = std::stoi(raw, &used);
   if (used != raw.size()) {
@@ -264,7 +247,7 @@ static int parse_int(const std::string &raw, const std::string &name) {
   return value;
 }
 
-static fs::path default_stat_path(const char *argv0) {
+static fs::path default_stat_path(const char* argv0) {
   fs::path exe = argv0 == nullptr ? fs::path() : fs::path(argv0);
   fs::path dir = exe.has_parent_path() ? exe.parent_path() : fs::current_path();
   if (dir.empty()) {
@@ -278,7 +261,7 @@ static int default_thread_count() {
   return n == 0 ? 1 : static_cast<int>(n);
 }
 
-static void print_help(const char *argv0) {
+static void print_help(const char* argv0) {
   std::cout << "Usage: " << argv0 << " --num=1000000 [options]\n"
             << "\n"
             << "Runs random-vs-random Togyz Kumalak games from the initial "
@@ -301,14 +284,14 @@ static void print_help(const char *argv0) {
             << "  --stat=PATH          Output stats file.\n";
 }
 
-static Args parse_args(int argc, char *argv[]) {
+static Args parse_args(int argc, char* argv[]) {
   Args args;
-  args.seed = static_cast<uint64_t>(
-      std::chrono::high_resolution_clock::now().time_since_epoch().count());
+  args.seed =
+      static_cast<uint64_t>(std::chrono::high_resolution_clock::now().time_since_epoch().count());
   args.stat_path = default_stat_path(argc > 0 ? argv[0] : nullptr);
   args.threads = default_thread_count();
 
-  auto require_value = [&](int &idx, const std::string &name) -> std::string {
+  auto require_value = [&](int& idx, const std::string& name) -> std::string {
     if (idx + 1 >= argc) {
       throw std::runtime_error("Missing value after " + name);
     }
@@ -381,7 +364,7 @@ static Args parse_args(int argc, char *argv[]) {
   return args;
 }
 
-static void merge_stats(Stats &dst, const Stats &src) {
+static void merge_stats(Stats& dst, const Stats& src) {
   dst.games += src.games;
   dst.whitewin += src.whitewin;
   dst.draw += src.draw;
@@ -390,12 +373,10 @@ static void merge_stats(Stats &dst, const Stats &src) {
   dst.withWhiteKumalakONLY += src.withWhiteKumalakONLY;
   dst.withBlackKumalakONLY += src.withBlackKumalakONLY;
   dst.withBOTHKumalaks += src.withBOTHKumalaks;
-  dst.moments_where_one_player_had_no_legal_move +=
-      src.moments_where_one_player_had_no_legal_move;
+  dst.moments_where_one_player_had_no_legal_move += src.moments_where_one_player_had_no_legal_move;
   dst.moves_of_all_games += src.moves_of_all_games;
   dst.positions_observed += src.positions_observed;
-  dst.sum_of_all_legal_moves_per_position +=
-      src.sum_of_all_legal_moves_per_position;
+  dst.sum_of_all_legal_moves_per_position += src.sum_of_all_legal_moves_per_position;
   dst.max_step_games += src.max_step_games;
   dst.longest_game = std::max(dst.longest_game, src.longest_game);
   dst.feature_tracked_games += src.feature_tracked_games;
@@ -417,20 +398,14 @@ static void merge_stats(Stats &dst, const Stats &src) {
   dst.blowout_wins_margin_50_plus += src.blowout_wins_margin_50_plus;
   dst.gameLengthMovesOverflow += src.gameLengthMovesOverflow;
   dst.exactMoveTrackedGames += src.exactMoveTrackedGames;
-  dst.branchingExactMovePositionsOverflow +=
-      src.branchingExactMovePositionsOverflow;
-  dst.branchingExactMoveLegalMoveSumOverflow +=
-      src.branchingExactMoveLegalMoveSumOverflow;
-  dst.whiteSideKumalakSumAtMoveOverflow +=
-      src.whiteSideKumalakSumAtMoveOverflow;
-  dst.blackSideKumalakSumAtMoveOverflow +=
-      src.blackSideKumalakSumAtMoveOverflow;
-  dst.totalSideKumalakSumAtMoveOverflow +=
-      src.totalSideKumalakSumAtMoveOverflow;
+  dst.branchingExactMovePositionsOverflow += src.branchingExactMovePositionsOverflow;
+  dst.branchingExactMoveLegalMoveSumOverflow += src.branchingExactMoveLegalMoveSumOverflow;
+  dst.whiteSideKumalakSumAtMoveOverflow += src.whiteSideKumalakSumAtMoveOverflow;
+  dst.blackSideKumalakSumAtMoveOverflow += src.blackSideKumalakSumAtMoveOverflow;
+  dst.totalSideKumalakSumAtMoveOverflow += src.totalSideKumalakSumAtMoveOverflow;
   dst.whiteKazanSumAtMoveOverflow += src.whiteKazanSumAtMoveOverflow;
   dst.blackKazanSumAtMoveOverflow += src.blackKazanSumAtMoveOverflow;
-  dst.max_capture_single_turn =
-      std::max(dst.max_capture_single_turn, src.max_capture_single_turn);
+  dst.max_capture_single_turn = std::max(dst.max_capture_single_turn, src.max_capture_single_turn);
 
   for (size_t i = 0; i < dst.kumalakAtPos.size(); ++i) {
     dst.kumalakAtPos[i] += src.kumalakAtPos[i];
@@ -447,32 +422,22 @@ static void merge_stats(Stats &dst, const Stats &src) {
     dst.whiteTuzdykYield[i] += src.whiteTuzdykYield[i];
     dst.blackTuzdykYield[i] += src.blackTuzdykYield[i];
     for (size_t outcome = 0; outcome < OUTCOME_COUNT; ++outcome) {
-      dst.whiteTuzdykPosOutcome[i][outcome] +=
-          src.whiteTuzdykPosOutcome[i][outcome];
-      dst.blackTuzdykPosOutcome[i][outcome] +=
-          src.blackTuzdykPosOutcome[i][outcome];
+      dst.whiteTuzdykPosOutcome[i][outcome] += src.whiteTuzdykPosOutcome[i][outcome];
+      dst.blackTuzdykPosOutcome[i][outcome] += src.blackTuzdykPosOutcome[i][outcome];
     }
   }
   for (size_t player = 0; player < 2; ++player) {
     dst.tuzdykBlockedBySymmetry[player] += src.tuzdykBlockedBySymmetry[player];
-    dst.tuzdykCreatedAtMoveOverflow[player] +=
-        src.tuzdykCreatedAtMoveOverflow[player];
+    dst.tuzdykCreatedAtMoveOverflow[player] += src.tuzdykCreatedAtMoveOverflow[player];
     dst.atsyrauOpponentCaptureSum[player] += src.atsyrauOpponentCaptureSum[player];
-    dst.officialAtsyrauOpponentCaptureSum[player] +=
-        src.officialAtsyrauOpponentCaptureSum[player];
-    dst.officialAtsyrauFacedKazanSum[player] +=
-        src.officialAtsyrauFacedKazanSum[player];
-    dst.officialAtsyrauOpponentKazanSum[player] +=
-        src.officialAtsyrauOpponentKazanSum[player];
-    dst.officialAtsyrauFacedLess81[player] +=
-        src.officialAtsyrauFacedLess81[player];
-    dst.officialAtsyrauFacedEqual81[player] +=
-        src.officialAtsyrauFacedEqual81[player];
-    dst.officialAtsyrauFacedGreater81[player] +=
-        src.officialAtsyrauFacedGreater81[player];
+    dst.officialAtsyrauOpponentCaptureSum[player] += src.officialAtsyrauOpponentCaptureSum[player];
+    dst.officialAtsyrauFacedKazanSum[player] += src.officialAtsyrauFacedKazanSum[player];
+    dst.officialAtsyrauOpponentKazanSum[player] += src.officialAtsyrauOpponentKazanSum[player];
+    dst.officialAtsyrauFacedLess81[player] += src.officialAtsyrauFacedLess81[player];
+    dst.officialAtsyrauFacedEqual81[player] += src.officialAtsyrauFacedEqual81[player];
+    dst.officialAtsyrauFacedGreater81[player] += src.officialAtsyrauFacedGreater81[player];
     for (size_t outcome = 0; outcome < OUTCOME_COUNT; ++outcome) {
-      dst.atsyrauByPlayerOutcome[player][outcome] +=
-          src.atsyrauByPlayerOutcome[player][outcome];
+      dst.atsyrauByPlayerOutcome[player][outcome] += src.atsyrauByPlayerOutcome[player][outcome];
       dst.officialAtsyrauByPlayerOutcome[player][outcome] +=
           src.officialAtsyrauByPlayerOutcome[player][outcome];
       dst.noLegalAfterScoreWinByPlayerOutcome[player][outcome] +=
@@ -481,8 +446,7 @@ static void merge_stats(Stats &dst, const Stats &src) {
   }
   for (size_t cause = 0; cause < dst.terminalCauseOutcome.size(); ++cause) {
     for (size_t outcome = 0; outcome < OUTCOME_COUNT; ++outcome) {
-      dst.terminalCauseOutcome[cause][outcome] +=
-          src.terminalCauseOutcome[cause][outcome];
+      dst.terminalCauseOutcome[cause][outcome] += src.terminalCauseOutcome[cause][outcome];
     }
   }
   for (size_t i = 0; i < dst.whiteTuzdykCreatedAtMove.size(); ++i) {
@@ -490,21 +454,16 @@ static void merge_stats(Stats &dst, const Stats &src) {
     dst.blackTuzdykCreatedAtMove[i] += src.blackTuzdykCreatedAtMove[i];
     dst.gameLengthMoves[i] += src.gameLengthMoves[i];
     dst.branchingExactMovePositions[i] += src.branchingExactMovePositions[i];
-    dst.branchingExactMoveLegalMoveSum[i] +=
-        src.branchingExactMoveLegalMoveSum[i];
-    dst.whiteSideKumalakSumAtMove[i] +=
-        src.whiteSideKumalakSumAtMove[i];
-    dst.blackSideKumalakSumAtMove[i] +=
-        src.blackSideKumalakSumAtMove[i];
-    dst.totalSideKumalakSumAtMove[i] +=
-        src.totalSideKumalakSumAtMove[i];
+    dst.branchingExactMoveLegalMoveSum[i] += src.branchingExactMoveLegalMoveSum[i];
+    dst.whiteSideKumalakSumAtMove[i] += src.whiteSideKumalakSumAtMove[i];
+    dst.blackSideKumalakSumAtMove[i] += src.blackSideKumalakSumAtMove[i];
+    dst.totalSideKumalakSumAtMove[i] += src.totalSideKumalakSumAtMove[i];
     dst.whiteKazanSumAtMove[i] += src.whiteKazanSumAtMove[i];
     dst.blackKazanSumAtMove[i] += src.blackKazanSumAtMove[i];
   }
   for (size_t i = 0; i < dst.whiteFirstMoveOutcome.size(); ++i) {
     for (size_t outcome = 0; outcome < OUTCOME_COUNT; ++outcome) {
-      dst.whiteFirstMoveOutcome[i][outcome] +=
-          src.whiteFirstMoveOutcome[i][outcome];
+      dst.whiteFirstMoveOutcome[i][outcome] += src.whiteFirstMoveOutcome[i][outcome];
     }
   }
   for (size_t i = 0; i < dst.openingPairOutcome.size(); ++i) {
@@ -521,7 +480,7 @@ static void merge_stats(Stats &dst, const Stats &src) {
   }
 }
 
-static bool parse_counter_value(const std::string &raw, uint64_t &out) {
+static bool parse_counter_value(const std::string& raw, uint64_t& out) {
   try {
     size_t used = 0;
     out = std::stoull(raw, &used);
@@ -531,9 +490,8 @@ static bool parse_counter_value(const std::string &raw, uint64_t &out) {
   }
 }
 
-static bool parse_indexed_counter(const std::string &key,
-                                  const std::string &prefix, size_t max_size,
-                                  size_t &idx) {
+static bool parse_indexed_counter(const std::string& key, const std::string& prefix,
+                                  size_t max_size, size_t& idx) {
   if (!has_prefix(key, prefix)) {
     return false;
   }
@@ -555,7 +513,7 @@ static bool parse_indexed_counter(const std::string &key,
   }
 }
 
-static int outcome_from_name(const std::string &name) {
+static int outcome_from_name(const std::string& name) {
   if (name == "whitewin") {
     return OUTCOME_WHITEWIN;
   }
@@ -568,9 +526,8 @@ static int outcome_from_name(const std::string &name) {
   return -1;
 }
 
-static const char *outcome_name(size_t outcome) {
-  static const std::array<const char *, OUTCOME_COUNT> names = {
-      "whitewin", "draw", "blackwin"};
+static const char* outcome_name(size_t outcome) {
+  static const std::array<const char*, OUTCOME_COUNT> names = {"whitewin", "draw", "blackwin"};
   return names[outcome];
 }
 
@@ -584,10 +541,8 @@ static int outcome_from_winner(int winner_code) {
   return OUTCOME_DRAW;
 }
 
-static bool parse_indexed_outcome_counter(const std::string &key,
-                                          const std::string &prefix,
-                                          size_t max_size, size_t &idx,
-                                          int &outcome) {
+static bool parse_indexed_outcome_counter(const std::string& key, const std::string& prefix,
+                                          size_t max_size, size_t& idx, int& outcome) {
   if (!has_prefix(key, prefix)) {
     return false;
   }
@@ -615,8 +570,7 @@ static bool parse_indexed_outcome_counter(const std::string &key,
   }
 }
 
-static void set_loaded_counter(Stats &stats, const std::string &key,
-                               uint64_t value) {
+static void set_loaded_counter(Stats& stats, const std::string& key, uint64_t value) {
   if (key == "%games") {
     stats.games = value;
   } else if (key == "%whitewin") {
@@ -688,133 +642,102 @@ static void set_loaded_counter(Stats &stats, const std::string &key,
   } else {
     size_t idx = 0;
     int outcome = -1;
-    if (parse_indexed_counter(key, "%kumalakAtPos", stats.kumalakAtPos.size(),
-                              idx)) {
+    if (parse_indexed_counter(key, "%kumalakAtPos", stats.kumalakAtPos.size(), idx)) {
       stats.kumalakAtPos[idx] = value;
-    } else if (parse_indexed_counter(key, "%legalMoveAtPos",
-                                     stats.legalMoveAtPos.size(), idx)) {
+    } else if (parse_indexed_counter(key, "%legalMoveAtPos", stats.legalMoveAtPos.size(), idx)) {
       stats.legalMoveAtPos[idx] = value;
-    } else if (parse_indexed_outcome_counter(key, "%tuzdykState",
-                                             stats.tuzdykStateOutcome.size(),
+    } else if (parse_indexed_outcome_counter(key, "%tuzdykState", stats.tuzdykStateOutcome.size(),
                                              idx, outcome)) {
       stats.tuzdykStateOutcome[idx][static_cast<size_t>(outcome)] = value;
-    } else if (parse_indexed_outcome_counter(
-                   key, "%whiteTuzdykPos", stats.whiteTuzdykPosOutcome.size(),
-                   idx, outcome)) {
+    } else if (parse_indexed_outcome_counter(key, "%whiteTuzdykPos",
+                                             stats.whiteTuzdykPosOutcome.size(), idx, outcome)) {
       stats.whiteTuzdykPosOutcome[idx][static_cast<size_t>(outcome)] = value;
-    } else if (parse_indexed_outcome_counter(
-                   key, "%blackTuzdykPos", stats.blackTuzdykPosOutcome.size(),
-                   idx, outcome)) {
+    } else if (parse_indexed_outcome_counter(key, "%blackTuzdykPos",
+                                             stats.blackTuzdykPosOutcome.size(), idx, outcome)) {
       stats.blackTuzdykPosOutcome[idx][static_cast<size_t>(outcome)] = value;
-    } else if (parse_indexed_counter(key, "%whiteTuzdykYieldPos",
-                                     stats.whiteTuzdykYield.size(), idx)) {
+    } else if (parse_indexed_counter(key, "%whiteTuzdykYieldPos", stats.whiteTuzdykYield.size(),
+                                     idx)) {
       stats.whiteTuzdykYield[idx] = value;
-    } else if (parse_indexed_counter(key, "%blackTuzdykYieldPos",
-                                     stats.blackTuzdykYield.size(), idx)) {
+    } else if (parse_indexed_counter(key, "%blackTuzdykYieldPos", stats.blackTuzdykYield.size(),
+                                     idx)) {
       stats.blackTuzdykYield[idx] = value;
     } else if (parse_indexed_counter(key, "%tuzdykBlockedBySymmetryPlayer",
                                      stats.tuzdykBlockedBySymmetry.size(), idx)) {
       stats.tuzdykBlockedBySymmetry[idx] = value;
     } else if (parse_indexed_counter(key, "%whiteTuzdykCreatedAtMove",
-                                     stats.whiteTuzdykCreatedAtMove.size(),
-                                     idx)) {
+                                     stats.whiteTuzdykCreatedAtMove.size(), idx)) {
       stats.whiteTuzdykCreatedAtMove[idx] = value;
     } else if (parse_indexed_counter(key, "%blackTuzdykCreatedAtMove",
-                                     stats.blackTuzdykCreatedAtMove.size(),
-                                     idx)) {
+                                     stats.blackTuzdykCreatedAtMove.size(), idx)) {
       stats.blackTuzdykCreatedAtMove[idx] = value;
     } else if (parse_indexed_counter(key, "%tuzdykCreatedAtMoveOverflowPlayer",
-                                     stats.tuzdykCreatedAtMoveOverflow.size(),
-                                     idx)) {
+                                     stats.tuzdykCreatedAtMoveOverflow.size(), idx)) {
       stats.tuzdykCreatedAtMoveOverflow[idx] = value;
-    } else if (parse_indexed_outcome_counter(
-                   key, "%whiteFirstMovePos",
-                   stats.whiteFirstMoveOutcome.size(), idx, outcome)) {
+    } else if (parse_indexed_outcome_counter(key, "%whiteFirstMovePos",
+                                             stats.whiteFirstMoveOutcome.size(), idx, outcome)) {
       stats.whiteFirstMoveOutcome[idx][static_cast<size_t>(outcome)] = value;
-    } else if (parse_indexed_outcome_counter(
-                   key, "%openingPair", stats.openingPairOutcome.size(), idx,
-                   outcome)) {
+    } else if (parse_indexed_outcome_counter(key, "%openingPair", stats.openingPairOutcome.size(),
+                                             idx, outcome)) {
       stats.openingPairOutcome[idx][static_cast<size_t>(outcome)] = value;
-    } else if (parse_indexed_outcome_counter(
-                   key, "%atsyrauByPlayer",
-                   stats.atsyrauByPlayerOutcome.size(), idx, outcome)) {
+    } else if (parse_indexed_outcome_counter(key, "%atsyrauByPlayer",
+                                             stats.atsyrauByPlayerOutcome.size(), idx, outcome)) {
       stats.atsyrauByPlayerOutcome[idx][static_cast<size_t>(outcome)] = value;
     } else if (parse_indexed_counter(key, "%atsyrauOpponentCaptureByPlayer",
-                                     stats.atsyrauOpponentCaptureSum.size(),
-                                     idx)) {
+                                     stats.atsyrauOpponentCaptureSum.size(), idx)) {
       stats.atsyrauOpponentCaptureSum[idx] = value;
-    } else if (parse_indexed_outcome_counter(
-                   key, "%officialAtsyrauByPlayer",
-                   stats.officialAtsyrauByPlayerOutcome.size(), idx,
-                   outcome)) {
-      stats.officialAtsyrauByPlayerOutcome[idx][static_cast<size_t>(outcome)] =
-          value;
-    } else if (parse_indexed_counter(
-                   key, "%officialAtsyrauOpponentCaptureByPlayer",
-                   stats.officialAtsyrauOpponentCaptureSum.size(), idx)) {
+    } else if (parse_indexed_outcome_counter(key, "%officialAtsyrauByPlayer",
+                                             stats.officialAtsyrauByPlayerOutcome.size(), idx,
+                                             outcome)) {
+      stats.officialAtsyrauByPlayerOutcome[idx][static_cast<size_t>(outcome)] = value;
+    } else if (parse_indexed_counter(key, "%officialAtsyrauOpponentCaptureByPlayer",
+                                     stats.officialAtsyrauOpponentCaptureSum.size(), idx)) {
       stats.officialAtsyrauOpponentCaptureSum[idx] = value;
-    } else if (parse_indexed_counter(
-                   key, "%officialAtsyrauFacedKazanSumByPlayer",
-                   stats.officialAtsyrauFacedKazanSum.size(), idx)) {
+    } else if (parse_indexed_counter(key, "%officialAtsyrauFacedKazanSumByPlayer",
+                                     stats.officialAtsyrauFacedKazanSum.size(), idx)) {
       stats.officialAtsyrauFacedKazanSum[idx] = value;
-    } else if (parse_indexed_counter(
-                   key, "%officialAtsyrauOpponentKazanSumByPlayer",
-                   stats.officialAtsyrauOpponentKazanSum.size(), idx)) {
+    } else if (parse_indexed_counter(key, "%officialAtsyrauOpponentKazanSumByPlayer",
+                                     stats.officialAtsyrauOpponentKazanSum.size(), idx)) {
       stats.officialAtsyrauOpponentKazanSum[idx] = value;
-    } else if (parse_indexed_counter(
-                   key, "%officialAtsyrauFacedLess81ByPlayer",
-                   stats.officialAtsyrauFacedLess81.size(), idx)) {
+    } else if (parse_indexed_counter(key, "%officialAtsyrauFacedLess81ByPlayer",
+                                     stats.officialAtsyrauFacedLess81.size(), idx)) {
       stats.officialAtsyrauFacedLess81[idx] = value;
-    } else if (parse_indexed_counter(
-                   key, "%officialAtsyrauFacedEqual81ByPlayer",
-                   stats.officialAtsyrauFacedEqual81.size(), idx)) {
+    } else if (parse_indexed_counter(key, "%officialAtsyrauFacedEqual81ByPlayer",
+                                     stats.officialAtsyrauFacedEqual81.size(), idx)) {
       stats.officialAtsyrauFacedEqual81[idx] = value;
-    } else if (parse_indexed_counter(
-                   key, "%officialAtsyrauFacedGreater81ByPlayer",
-                   stats.officialAtsyrauFacedGreater81.size(), idx)) {
+    } else if (parse_indexed_counter(key, "%officialAtsyrauFacedGreater81ByPlayer",
+                                     stats.officialAtsyrauFacedGreater81.size(), idx)) {
       stats.officialAtsyrauFacedGreater81[idx] = value;
-    } else if (parse_indexed_outcome_counter(
-                   key, "%noLegalAfterScoreWinByPlayer",
-                   stats.noLegalAfterScoreWinByPlayerOutcome.size(), idx,
-                   outcome)) {
-      stats.noLegalAfterScoreWinByPlayerOutcome[idx]
-                                             [static_cast<size_t>(outcome)] =
-          value;
-    } else if (parse_indexed_outcome_counter(
-                   key, "%terminalCause", stats.terminalCauseOutcome.size(),
-                   idx, outcome)) {
+    } else if (parse_indexed_outcome_counter(key, "%noLegalAfterScoreWinByPlayer",
+                                             stats.noLegalAfterScoreWinByPlayerOutcome.size(), idx,
+                                             outcome)) {
+      stats.noLegalAfterScoreWinByPlayerOutcome[idx][static_cast<size_t>(outcome)] = value;
+    } else if (parse_indexed_outcome_counter(key, "%terminalCause",
+                                             stats.terminalCauseOutcome.size(), idx, outcome)) {
       stats.terminalCauseOutcome[idx][static_cast<size_t>(outcome)] = value;
-    } else if (parse_indexed_counter(key, "%winMargin", stats.winMargin.size(),
-                                     idx)) {
+    } else if (parse_indexed_counter(key, "%winMargin", stats.winMargin.size(), idx)) {
       stats.winMargin[idx] = value;
-    } else if (parse_indexed_counter(key, "%gameLengthMoves",
-                                     stats.gameLengthMoves.size(), idx)) {
+    } else if (parse_indexed_counter(key, "%gameLengthMoves", stats.gameLengthMoves.size(), idx)) {
       stats.gameLengthMoves[idx] = value;
     } else if (parse_indexed_counter(key, "%branchingExactMovePositions",
-                                     stats.branchingExactMovePositions.size(),
-                                     idx)) {
+                                     stats.branchingExactMovePositions.size(), idx)) {
       stats.branchingExactMovePositions[idx] = value;
-    } else if (parse_indexed_counter(
-                   key, "%branchingExactMoveLegalMoveSum",
-                   stats.branchingExactMoveLegalMoveSum.size(), idx)) {
+    } else if (parse_indexed_counter(key, "%branchingExactMoveLegalMoveSum",
+                                     stats.branchingExactMoveLegalMoveSum.size(), idx)) {
       stats.branchingExactMoveLegalMoveSum[idx] = value;
-    } else if (parse_indexed_counter(
-                   key, "%whiteSideKumalakSumAtMove",
-                   stats.whiteSideKumalakSumAtMove.size(), idx)) {
+    } else if (parse_indexed_counter(key, "%whiteSideKumalakSumAtMove",
+                                     stats.whiteSideKumalakSumAtMove.size(), idx)) {
       stats.whiteSideKumalakSumAtMove[idx] = value;
-    } else if (parse_indexed_counter(
-                   key, "%blackSideKumalakSumAtMove",
-                   stats.blackSideKumalakSumAtMove.size(), idx)) {
+    } else if (parse_indexed_counter(key, "%blackSideKumalakSumAtMove",
+                                     stats.blackSideKumalakSumAtMove.size(), idx)) {
       stats.blackSideKumalakSumAtMove[idx] = value;
-    } else if (parse_indexed_counter(
-                   key, "%totalSideKumalakSumAtMove",
-                   stats.totalSideKumalakSumAtMove.size(), idx)) {
+    } else if (parse_indexed_counter(key, "%totalSideKumalakSumAtMove",
+                                     stats.totalSideKumalakSumAtMove.size(), idx)) {
       stats.totalSideKumalakSumAtMove[idx] = value;
-    } else if (parse_indexed_counter(key, "%whiteKazanSumAtMove",
-                                     stats.whiteKazanSumAtMove.size(), idx)) {
+    } else if (parse_indexed_counter(key, "%whiteKazanSumAtMove", stats.whiteKazanSumAtMove.size(),
+                                     idx)) {
       stats.whiteKazanSumAtMove[idx] = value;
-    } else if (parse_indexed_counter(key, "%blackKazanSumAtMove",
-                                     stats.blackKazanSumAtMove.size(), idx)) {
+    } else if (parse_indexed_counter(key, "%blackKazanSumAtMove", stats.blackKazanSumAtMove.size(),
+                                     idx)) {
       stats.blackKazanSumAtMove[idx] = value;
     } else if (parse_indexed_counter(key, "%branchingBandPositions",
                                      stats.branchingPositions.size(), idx)) {
@@ -826,7 +749,7 @@ static void set_loaded_counter(Stats &stats, const std::string &key,
   }
 }
 
-static Stats read_existing_stats(const fs::path &path) {
+static Stats read_existing_stats(const fs::path& path) {
   Stats stats;
   if (!fs::exists(path) || fs::is_empty(path)) {
     return stats;
@@ -860,8 +783,7 @@ static Stats read_existing_stats(const fs::path &path) {
   return stats;
 }
 
-static inline void determine_winner(int kazans0, int kazans1,
-                                    int &winner_code) {
+static inline void determine_winner(int kazans0, int kazans1, int& winner_code) {
   if (kazans0 > kazans1) {
     winner_code = PLAYER_1;
   } else if (kazans1 > kazans0) {
@@ -871,7 +793,7 @@ static inline void determine_winner(int kazans0, int kazans1,
   }
 }
 
-static int collect_legal(ToguzEnv &env, std::array<int, 9> &moves) {
+static int collect_legal(ToguzEnv& env, std::array<int, 9>& moves) {
   std::array<int, 9> actions{};
   env.update_legal_actions(actions);
 
@@ -884,8 +806,7 @@ static int collect_legal(ToguzEnv &env, std::array<int, 9> &moves) {
   return count;
 }
 
-static inline int collect_legal_fast(const FastState &st,
-                                     std::array<int, 9> &moves) {
+static inline int collect_legal_fast(const FastState& st, std::array<int, 9>& moves) {
   const int base = st.to_play * NUM_PITS;
   const int blocked = st.kumalaks[1 - st.to_play];
   int count = 0;
@@ -898,7 +819,7 @@ static inline int collect_legal_fast(const FastState &st,
   return count;
 }
 
-static inline bool has_legal_fast(const FastState &st) {
+static inline bool has_legal_fast(const FastState& st) {
   const int base = st.to_play * NUM_PITS;
   const int blocked = st.kumalaks[1 - st.to_play];
   for (int i = 0; i < NUM_PITS; ++i) {
@@ -919,10 +840,8 @@ static inline int branching_band_for_ply(int ply) {
   return 2;
 }
 
-static inline void add_position_stats(Stats &stats,
-                                      const std::array<int, 9> &moves,
-                                      int count, int ply,
-                                      bool track_branching = false) {
+static inline void add_position_stats(Stats& stats, const std::array<int, 9>& moves, int count,
+                                      int ply, bool track_branching = false) {
   stats.positions_observed++;
   stats.sum_of_all_legal_moves_per_position += static_cast<uint64_t>(count);
   for (int i = 0; i < count; ++i) {
@@ -935,19 +854,14 @@ static inline void add_position_stats(Stats &stats,
 
   int band = branching_band_for_ply(ply);
   stats.branchingPositions[static_cast<size_t>(band)]++;
-  stats.branchingLegalMoveSum[static_cast<size_t>(band)] +=
-      static_cast<uint64_t>(count);
+  stats.branchingLegalMoveSum[static_cast<size_t>(band)] += static_cast<uint64_t>(count);
 }
 
-static inline void add_exact_move_stats(Stats &stats, int ply, int legal_count,
-                                        int white_side_kumalaks,
-                                        int black_side_kumalaks,
-                                        int white_kazan,
-                                        int black_kazan) {
-  const uint64_t white_side =
-      static_cast<uint64_t>(std::max(0, white_side_kumalaks));
-  const uint64_t black_side =
-      static_cast<uint64_t>(std::max(0, black_side_kumalaks));
+static inline void add_exact_move_stats(Stats& stats, int ply, int legal_count,
+                                        int white_side_kumalaks, int black_side_kumalaks,
+                                        int white_kazan, int black_kazan) {
+  const uint64_t white_side = static_cast<uint64_t>(std::max(0, white_side_kumalaks));
+  const uint64_t black_side = static_cast<uint64_t>(std::max(0, black_side_kumalaks));
   const uint64_t total_side = white_side + black_side;
   const uint64_t white_store = static_cast<uint64_t>(std::max(0, white_kazan));
   const uint64_t black_store = static_cast<uint64_t>(std::max(0, black_kazan));
@@ -955,8 +869,7 @@ static inline void add_exact_move_stats(Stats &stats, int ply, int legal_count,
   if (ply >= 0 && static_cast<size_t>(ply) <= TRACKED_MOVE_LIMIT) {
     size_t idx = static_cast<size_t>(ply);
     stats.branchingExactMovePositions[idx]++;
-    stats.branchingExactMoveLegalMoveSum[idx] +=
-        static_cast<uint64_t>(legal_count);
+    stats.branchingExactMoveLegalMoveSum[idx] += static_cast<uint64_t>(legal_count);
     stats.whiteSideKumalakSumAtMove[idx] += white_side;
     stats.blackSideKumalakSumAtMove[idx] += black_side;
     stats.totalSideKumalakSumAtMove[idx] += total_side;
@@ -966,8 +879,7 @@ static inline void add_exact_move_stats(Stats &stats, int ply, int legal_count,
   }
 
   stats.branchingExactMovePositionsOverflow++;
-  stats.branchingExactMoveLegalMoveSumOverflow +=
-      static_cast<uint64_t>(legal_count);
+  stats.branchingExactMoveLegalMoveSumOverflow += static_cast<uint64_t>(legal_count);
   stats.whiteSideKumalakSumAtMoveOverflow += white_side;
   stats.blackSideKumalakSumAtMoveOverflow += black_side;
   stats.totalSideKumalakSumAtMoveOverflow += total_side;
@@ -975,8 +887,7 @@ static inline void add_exact_move_stats(Stats &stats, int ply, int legal_count,
   stats.blackKazanSumAtMoveOverflow += black_store;
 }
 
-static inline void side_kumalak_counts(const Bitboard &board, int &white_side,
-                                       int &black_side) {
+static inline void side_kumalak_counts(const Bitboard& board, int& white_side, int& black_side) {
   white_side = 0;
   black_side = 0;
   for (int i = 0; i < NUM_PITS; ++i) {
@@ -985,8 +896,7 @@ static inline void side_kumalak_counts(const Bitboard &board, int &white_side,
   }
 }
 
-static inline void side_kumalak_counts(const FastState &st, int &white_side,
-                                       int &black_side) {
+static inline void side_kumalak_counts(const FastState& st, int& white_side, int& black_side) {
   white_side = 0;
   black_side = 0;
   for (int i = 0; i < NUM_PITS; ++i) {
@@ -995,12 +905,11 @@ static inline void side_kumalak_counts(const FastState &st, int &white_side,
   }
 }
 
-static void add_final_game_stats(const ToguzEnv &env, Stats &stats) {
+static void add_final_game_stats(const ToguzEnv& env, Stats& stats) {
   stats.games++;
   stats.exactMoveTrackedGames++;
   stats.moves_of_all_games += static_cast<uint64_t>(env.steps);
-  stats.longest_game =
-      std::max<uint64_t>(stats.longest_game, static_cast<uint64_t>(env.steps));
+  stats.longest_game = std::max<uint64_t>(stats.longest_game, static_cast<uint64_t>(env.steps));
 
   if (env.winner_code == PLAYER_1) {
     stats.whitewin++;
@@ -1031,12 +940,11 @@ static void add_final_game_stats(const ToguzEnv &env, Stats &stats) {
   }
 }
 
-static void add_final_game_stats(const FastState &st, Stats &stats) {
+static void add_final_game_stats(const FastState& st, Stats& stats) {
   stats.games++;
   stats.exactMoveTrackedGames++;
   stats.moves_of_all_games += static_cast<uint64_t>(st.steps);
-  stats.longest_game =
-      std::max<uint64_t>(stats.longest_game, static_cast<uint64_t>(st.steps));
+  stats.longest_game = std::max<uint64_t>(stats.longest_game, static_cast<uint64_t>(st.steps));
 
   if (st.winner_code == PLAYER_1) {
     stats.whitewin++;
@@ -1067,7 +975,7 @@ static void add_final_game_stats(const FastState &st, Stats &stats) {
   }
 }
 
-static inline void step_fast(FastState &st, int action, MoveEvents &events) {
+static inline void step_fast(FastState& st, int action, MoveEvents& events) {
   events = MoveEvents();
 
   const int p = st.to_play;
@@ -1088,7 +996,7 @@ static inline void step_fast(FastState &st, int action, MoveEvents &events) {
     const int cycles = sow_count / 18;
     const int rem = sow_count % 18;
     if (cycles != 0) {
-      for (uint16_t &pit : st.board) {
+      for (uint16_t& pit : st.board) {
         pit = static_cast<uint16_t>(pit + cycles);
       }
     }
@@ -1108,8 +1016,7 @@ static inline void step_fast(FastState &st, int action, MoveEvents &events) {
         st.kazans[owner] += captured;
         st.board[static_cast<size_t>(pit)] = 0;
         if (pos >= 0 && pos < KUMALAK_POS_COUNT) {
-          events.tuzdyk_yield[static_cast<size_t>(owner)]
-                             [static_cast<size_t>(pos)] +=
+          events.tuzdyk_yield[static_cast<size_t>(owner)][static_cast<size_t>(pos)] +=
               static_cast<uint64_t>(captured);
         }
       }
@@ -1154,8 +1061,7 @@ static inline void step_fast(FastState &st, int action, MoveEvents &events) {
     events.kazan_before_atsyrau = st.kazans;
     for (int i = 0; i < NUM_PITS; ++i) {
       events.atsyrau_gain[PLAYER_1] += st.board[static_cast<size_t>(i)];
-      events.atsyrau_gain[PLAYER_2] +=
-          st.board[static_cast<size_t>(i + NUM_PITS)];
+      events.atsyrau_gain[PLAYER_2] += st.board[static_cast<size_t>(i + NUM_PITS)];
       st.kazans[PLAYER_1] += st.board[static_cast<size_t>(i)];
       st.kazans[PLAYER_2] += st.board[static_cast<size_t>(i + NUM_PITS)];
       st.board[static_cast<size_t>(i)] = 0;
@@ -1164,20 +1070,16 @@ static inline void step_fast(FastState &st, int action, MoveEvents &events) {
     determine_winner(st.kazans[PLAYER_1], st.kazans[PLAYER_2], st.winner_code);
   }
 
-  events.capture_by_mover =
-      static_cast<uint64_t>(std::max(0, st.kazans[p] - kazan_before_mover));
+  events.capture_by_mover = static_cast<uint64_t>(std::max(0, st.kazans[p] - kazan_before_mover));
 }
 
-static void add_move_events(Stats &stats, GameFeatures &game,
-                            const MoveEvents &events) {
-  stats.max_capture_single_turn =
-      std::max(stats.max_capture_single_turn, events.capture_by_mover);
+static void add_move_events(Stats& stats, GameFeatures& game, const MoveEvents& events) {
+  stats.max_capture_single_turn = std::max(stats.max_capture_single_turn, events.capture_by_mover);
 
   for (int player = 0; player < 2; ++player) {
     for (int pos = 0; pos < KUMALAK_POS_COUNT; ++pos) {
       uint64_t captured =
-          events.tuzdyk_yield[static_cast<size_t>(player)]
-                             [static_cast<size_t>(pos)];
+          events.tuzdyk_yield[static_cast<size_t>(player)][static_cast<size_t>(pos)];
       if (captured == 0) {
         continue;
       }
@@ -1198,34 +1100,29 @@ static void add_move_events(Stats &stats, GameFeatures &game,
         stats.blackTuzdykCreatedAtMove[move_idx]++;
       }
     } else {
-      stats.tuzdykCreatedAtMoveOverflow
-          [static_cast<size_t>(events.tuzdyk_created_owner)]++;
+      stats.tuzdykCreatedAtMoveOverflow[static_cast<size_t>(events.tuzdyk_created_owner)]++;
     }
   }
 
   if (events.tuzdyk_blocked_player != -1) {
-    stats.tuzdykBlockedBySymmetry
-        [static_cast<size_t>(events.tuzdyk_blocked_player)]++;
+    stats.tuzdykBlockedBySymmetry[static_cast<size_t>(events.tuzdyk_blocked_player)]++;
   }
 
   if (events.atsyrau_by_player != -1) {
     game.atsyrau_by_player = events.atsyrau_by_player;
     int opponent = 1 - events.atsyrau_by_player;
-    game.atsyrau_opponent_capture =
-        events.atsyrau_gain[static_cast<size_t>(opponent)];
+    game.atsyrau_opponent_capture = events.atsyrau_gain[static_cast<size_t>(opponent)];
     game.atsyrau_faced_kazan_before =
         events.kazan_before_atsyrau[static_cast<size_t>(events.atsyrau_by_player)];
-    game.atsyrau_opponent_kazan_before =
-        events.kazan_before_atsyrau[static_cast<size_t>(opponent)];
+    game.atsyrau_opponent_kazan_before = events.kazan_before_atsyrau[static_cast<size_t>(opponent)];
   }
 
   if (events.no_legal_after_score_win_by_player != -1) {
-    game.no_legal_after_score_win_by_player =
-        events.no_legal_after_score_win_by_player;
+    game.no_legal_after_score_win_by_player = events.no_legal_after_score_win_by_player;
   }
 }
 
-static int tuzdyk_state_index(const FastState &st) {
+static int tuzdyk_state_index(const FastState& st) {
   bool white_has = st.kumalaks[PLAYER_1] != -1;
   bool black_has = st.kumalaks[PLAYER_2] != -1;
   if (!white_has && !black_has) {
@@ -1240,14 +1137,12 @@ static int tuzdyk_state_index(const FastState &st) {
   return TUZDYK_STATE_BOTH;
 }
 
-static void add_advanced_final_game_stats(const FastState &st,
-                                          const GameFeatures &game,
-                                          Stats &stats) {
+static void add_advanced_final_game_stats(const FastState& st, const GameFeatures& game,
+                                          Stats& stats) {
   int outcome = outcome_from_winner(st.winner_code);
   stats.feature_tracked_games++;
   stats.feature_move_sum += static_cast<uint64_t>(st.steps);
-  if (stats.feature_min_moves == 0 ||
-      static_cast<uint64_t>(st.steps) < stats.feature_min_moves) {
+  if (stats.feature_min_moves == 0 || static_cast<uint64_t>(st.steps) < stats.feature_min_moves) {
     stats.feature_min_moves = static_cast<uint64_t>(st.steps);
   }
   stats.feature_max_moves =
@@ -1265,12 +1160,10 @@ static void add_advanced_final_game_stats(const FastState &st,
   int white_pos = st.kumalaks[PLAYER_1];
   int black_pos = st.kumalaks[PLAYER_2];
   if (white_pos >= 0 && white_pos < KUMALAK_POS_COUNT) {
-    stats.whiteTuzdykPosOutcome[static_cast<size_t>(white_pos)]
-                               [static_cast<size_t>(outcome)]++;
+    stats.whiteTuzdykPosOutcome[static_cast<size_t>(white_pos)][static_cast<size_t>(outcome)]++;
   }
   if (black_pos >= 0 && black_pos < KUMALAK_POS_COUNT) {
-    stats.blackTuzdykPosOutcome[static_cast<size_t>(black_pos)]
-                               [static_cast<size_t>(outcome)]++;
+    stats.blackTuzdykPosOutcome[static_cast<size_t>(black_pos)][static_cast<size_t>(outcome)]++;
   }
 
   if (game.white_first_move >= 0) {
@@ -1279,8 +1172,7 @@ static void add_advanced_final_game_stats(const FastState &st,
   }
   if (game.white_first_move >= 0 && game.black_first_move >= 0) {
     size_t opening_idx =
-        static_cast<size_t>(game.white_first_move * LEGAL_POS_COUNT +
-                            game.black_first_move);
+        static_cast<size_t>(game.white_first_move * LEGAL_POS_COUNT + game.black_first_move);
     stats.openingPairOutcome[opening_idx][static_cast<size_t>(outcome)]++;
   }
 
@@ -1289,8 +1181,7 @@ static void add_advanced_final_game_stats(const FastState &st,
     stats.atsyrauByPlayerOutcome[player][static_cast<size_t>(outcome)]++;
     stats.atsyrauOpponentCaptureSum[player] += game.atsyrau_opponent_capture;
     stats.officialAtsyrauByPlayerOutcome[player][static_cast<size_t>(outcome)]++;
-    stats.officialAtsyrauOpponentCaptureSum[player] +=
-        game.atsyrau_opponent_capture;
+    stats.officialAtsyrauOpponentCaptureSum[player] += game.atsyrau_opponent_capture;
     stats.officialAtsyrauFacedKazanSum[player] +=
         static_cast<uint64_t>(std::max(0, game.atsyrau_faced_kazan_before));
     stats.officialAtsyrauOpponentKazanSum[player] +=
@@ -1306,8 +1197,7 @@ static void add_advanced_final_game_stats(const FastState &st,
 
   if (game.no_legal_after_score_win_by_player != -1) {
     size_t player = static_cast<size_t>(game.no_legal_after_score_win_by_player);
-    stats.noLegalAfterScoreWinByPlayerOutcome[player]
-                                            [static_cast<size_t>(outcome)]++;
+    stats.noLegalAfterScoreWinByPlayerOutcome[player][static_cast<size_t>(outcome)]++;
   }
 
   if (game.max_steps_terminal) {
@@ -1435,7 +1325,7 @@ static Stats run_env_fast_rng(uint64_t games, uint64_t seed, int max_steps) {
 }
 
 template <typename Rng>
-static Stats run_fast_core(uint64_t games, Rng &rng, int max_steps) {
+static Stats run_fast_core(uint64_t games, Rng& rng, int max_steps) {
   FastState st;
   Stats stats;
 
@@ -1450,13 +1340,12 @@ static Stats run_fast_core(uint64_t games, Rng &rng, int max_steps) {
       int white_side = 0;
       int black_side = 0;
       side_kumalak_counts(st, white_side, black_side);
-      add_exact_move_stats(stats, st.steps + 1, count, white_side, black_side,
-                           st.kazans[PLAYER_1], st.kazans[PLAYER_2]);
+      add_exact_move_stats(stats, st.steps + 1, count, white_side, black_side, st.kazans[PLAYER_1],
+                           st.kazans[PLAYER_2]);
 
       if (count == 0) {
         stats.moments_where_one_player_had_no_legal_move++;
-        determine_winner(st.kazans[PLAYER_1], st.kazans[PLAYER_2],
-                         st.winner_code);
+        determine_winner(st.kazans[PLAYER_1], st.kazans[PLAYER_2], st.winner_code);
         break;
       }
 
@@ -1478,11 +1367,9 @@ static Stats run_fast_core(uint64_t games, Rng &rng, int max_steps) {
     if (st.steps >= max_steps && st.winner_code == -2) {
       stats.max_step_games++;
       game_features.max_steps_terminal = true;
-      determine_winner(st.kazans[PLAYER_1], st.kazans[PLAYER_2],
-                       st.winner_code);
+      determine_winner(st.kazans[PLAYER_1], st.kazans[PLAYER_2], st.winner_code);
     } else if (st.winner_code == -2) {
-      determine_winner(st.kazans[PLAYER_1], st.kazans[PLAYER_2],
-                       st.winner_code);
+      determine_winner(st.kazans[PLAYER_1], st.kazans[PLAYER_2], st.winner_code);
     }
 
     add_final_game_stats(st, stats);
@@ -1502,8 +1389,7 @@ static Stats run_fast_prebuffer(uint64_t games, uint64_t seed, int max_steps) {
   return run_fast_core(games, rng, max_steps);
 }
 
-static Stats run_fast_parallel(uint64_t games, uint64_t seed, int max_steps,
-                               int threads) {
+static Stats run_fast_parallel(uint64_t games, uint64_t seed, int max_steps, int threads) {
   threads = std::max(1, std::min<int>(threads, static_cast<int>(games)));
   std::vector<Stats> partial(static_cast<size_t>(threads));
   std::vector<std::thread> workers;
@@ -1515,25 +1401,24 @@ static Stats run_fast_parallel(uint64_t games, uint64_t seed, int max_steps,
   for (int t = 0; t < threads; ++t) {
     uint64_t count = base + (static_cast<uint64_t>(t) < rem ? 1 : 0);
     // Hash worker seeds so SplitMix streams are not one-step offsets.
-    uint64_t thread_seed =
-        splitmix64_mix(seed + SPLITMIX_GAMMA * static_cast<uint64_t>(t + 1));
+    uint64_t thread_seed = splitmix64_mix(seed + SPLITMIX_GAMMA * static_cast<uint64_t>(t + 1));
     workers.emplace_back([&, t, count, thread_seed]() {
       partial[static_cast<size_t>(t)] = run_fast(count, thread_seed, max_steps);
     });
   }
 
-  for (std::thread &worker : workers) {
+  for (std::thread& worker : workers) {
     worker.join();
   }
 
   Stats total;
-  for (const Stats &stats : partial) {
+  for (const Stats& stats : partial) {
     merge_stats(total, stats);
   }
   return total;
 }
 
-static Stats run_mode(const Args &args) {
+static Stats run_mode(const Args& args) {
   // The slower modes are kept for validation and timing comparisons. The paper
   // run uses fast-parallel, which is the compact simulator split across CPU
   // threads.
@@ -1550,13 +1435,12 @@ static Stats run_mode(const Args &args) {
     return run_fast_prebuffer(args.num_games, args.seed, args.max_steps);
   }
   if (args.mode == "fast-parallel") {
-    return run_fast_parallel(args.num_games, args.seed, args.max_steps,
-                             args.threads);
+    return run_fast_parallel(args.num_games, args.seed, args.max_steps, args.threads);
   }
   throw std::runtime_error("Unknown mode: " + args.mode);
 }
 
-static uint64_t median_moves_from_hist(const Stats &stats) {
+static uint64_t median_moves_from_hist(const Stats& stats) {
   if (stats.feature_tracked_games == 0) {
     return 0;
   }
@@ -1581,8 +1465,7 @@ static uint64_t avg_x1000(uint64_t sum, uint64_t count) {
 
 static std::string with_commas(uint64_t value) {
   std::string s = std::to_string(value);
-  for (int insert_at = static_cast<int>(s.size()) - 3; insert_at > 0;
-       insert_at -= 3) {
+  for (int insert_at = static_cast<int>(s.size()) - 3; insert_at > 0; insert_at -= 3) {
     s.insert(static_cast<size_t>(insert_at), ",");
   }
   return s;
@@ -1598,10 +1481,7 @@ static std::string percent(uint64_t part, uint64_t whole) {
   if (whole == 0) {
     return "0.00%";
   }
-  return fixed_number(100.0 * static_cast<double>(part) /
-                          static_cast<double>(whole),
-                      2) +
-         "%";
+  return fixed_number(100.0 * static_cast<double>(part) / static_cast<double>(whole), 2) + "%";
 }
 
 static double ratio(uint64_t numerator, uint64_t denominator) {
@@ -1611,8 +1491,7 @@ static double ratio(uint64_t numerator, uint64_t denominator) {
   return static_cast<double>(numerator) / static_cast<double>(denominator);
 }
 
-static void write_human_summary(std::ostream &out, const Args &args,
-                                const Stats &stats) {
+static void write_human_summary(std::ostream& out, const Args& args, const Stats& stats) {
   out << "# Togyzkumalak Billion-Game Statistics\n\n";
   out << "This file starts with a human-readable summary for the research "
          "paper, followed by stable machine-readable counters in `%key "
@@ -1624,76 +1503,60 @@ static void write_human_summary(std::ostream &out, const Args &args,
   out << "| Games | " << with_commas(stats.games) << " |\n";
   out << "| Seed | " << args.seed << " |\n";
   out << "| Mode | " << args.mode << " |\n";
-  out << "| Threads | "
-      << (args.mode == "fast-parallel" ? args.threads : 1) << " |\n";
+  out << "| Threads | " << (args.mode == "fast-parallel" ? args.threads : 1) << " |\n";
   out << "| Max steps per game | " << with_commas(args.max_steps) << " |\n";
   out << "| Max-step games | " << with_commas(stats.max_step_games) << " |\n\n";
 
   out << "## Headline Metrics\n\n";
   out << "| Metric | Value |\n";
   out << "| :--- | ---: |\n";
-  out << "| Observed board positions | "
-      << with_commas(stats.positions_observed) << " |\n";
+  out << "| Observed board positions | " << with_commas(stats.positions_observed) << " |\n";
   out << "| Total legal moves over observed positions | "
       << with_commas(stats.sum_of_all_legal_moves_per_position) << " |\n";
   out << "| Empirical average branching factor | "
-      << fixed_number(ratio(stats.sum_of_all_legal_moves_per_position,
-                            stats.positions_observed),
-                      3)
+      << fixed_number(ratio(stats.sum_of_all_legal_moves_per_position, stats.positions_observed), 3)
       << " |\n";
   out << "| Average game length, halfmoves | "
-      << fixed_number(ratio(stats.feature_move_sum,
-                            stats.feature_tracked_games),
-                      3)
+      << fixed_number(ratio(stats.feature_move_sum, stats.feature_tracked_games), 3) << " |\n";
+  out << "| Median game length, halfmoves | " << with_commas(median_moves_from_hist(stats))
       << " |\n";
-  out << "| Median game length, halfmoves | "
-      << with_commas(median_moves_from_hist(stats)) << " |\n";
-  out << "| Shortest winning game observed | "
-      << with_commas(stats.feature_min_moves_to_win) << " |\n";
-  out << "| Longest random game observed | "
-      << with_commas(stats.longest_game) << " |\n\n";
+  out << "| Shortest winning game observed | " << with_commas(stats.feature_min_moves_to_win)
+      << " |\n";
+  out << "| Longest random game observed | " << with_commas(stats.longest_game) << " |\n\n";
 
   out << "## Outcomes\n\n";
   out << "| Result | Games | Share |\n";
   out << "| :--- | ---: | ---: |\n";
-  out << "| White / first player win | " << with_commas(stats.whitewin)
-      << " | " << percent(stats.whitewin, stats.games) << " |\n";
-  out << "| Draw | " << with_commas(stats.draw) << " | "
-      << percent(stats.draw, stats.games) << " |\n";
-  out << "| Black / second player win | " << with_commas(stats.blackwin)
-      << " | " << percent(stats.blackwin, stats.games) << " |\n\n";
+  out << "| White / first player win | " << with_commas(stats.whitewin) << " | "
+      << percent(stats.whitewin, stats.games) << " |\n";
+  out << "| Draw | " << with_commas(stats.draw) << " | " << percent(stats.draw, stats.games)
+      << " |\n";
+  out << "| Black / second player win | " << with_commas(stats.blackwin) << " | "
+      << percent(stats.blackwin, stats.games) << " |\n\n";
 
   out << "## Tuzdyk Ownership\n\n";
   out << "| State | Games | White win | Draw | Black win |\n";
   out << "| :--- | ---: | ---: | ---: | ---: |\n";
-  const std::array<const char *, TUZDYK_STATE_COUNT> state_names = {
-      "No Tuzdyks", "Only White has Tuzdyk", "Only Black has Tuzdyk",
-      "Both players have Tuzdyks"};
+  const std::array<const char*, TUZDYK_STATE_COUNT> state_names = {
+      "No Tuzdyks", "Only White has Tuzdyk", "Only Black has Tuzdyk", "Both players have Tuzdyks"};
   for (size_t state = 0; state < stats.tuzdykStateOutcome.size(); ++state) {
-    const uint64_t total =
-        stats.tuzdykStateOutcome[state][OUTCOME_WHITEWIN] +
-        stats.tuzdykStateOutcome[state][OUTCOME_DRAW] +
-        stats.tuzdykStateOutcome[state][OUTCOME_BLACKWIN];
+    const uint64_t total = stats.tuzdykStateOutcome[state][OUTCOME_WHITEWIN] +
+                           stats.tuzdykStateOutcome[state][OUTCOME_DRAW] +
+                           stats.tuzdykStateOutcome[state][OUTCOME_BLACKWIN];
     out << "| " << state_names[state] << " | " << with_commas(total) << " | "
-        << percent(stats.tuzdykStateOutcome[state][OUTCOME_WHITEWIN], total)
-        << " | " << percent(stats.tuzdykStateOutcome[state][OUTCOME_DRAW], total)
-        << " | "
-        << percent(stats.tuzdykStateOutcome[state][OUTCOME_BLACKWIN], total)
-        << " |\n";
+        << percent(stats.tuzdykStateOutcome[state][OUTCOME_WHITEWIN], total) << " | "
+        << percent(stats.tuzdykStateOutcome[state][OUTCOME_DRAW], total) << " | "
+        << percent(stats.tuzdykStateOutcome[state][OUTCOME_BLACKWIN], total) << " |\n";
   }
   out << "\n";
 
   out << "## Branching Bands\n\n";
   out << "| Halfmove band | Observed positions | Average legal moves |\n";
   out << "| :--- | ---: | ---: |\n";
-  const std::array<const char *, BRANCHING_BAND_COUNT> band_names = {
-      "1..20", "21..60", "61+"};
+  const std::array<const char*, BRANCHING_BAND_COUNT> band_names = {"1..20", "21..60", "61+"};
   for (size_t band = 0; band < BRANCHING_BAND_COUNT; ++band) {
-    out << "| " << band_names[band] << " | "
-        << with_commas(stats.branchingPositions[band]) << " | "
-        << fixed_number(ratio(stats.branchingLegalMoveSum[band],
-                              stats.branchingPositions[band]),
-                        3)
+    out << "| " << band_names[band] << " | " << with_commas(stats.branchingPositions[band]) << " | "
+        << fixed_number(ratio(stats.branchingLegalMoveSum[band], stats.branchingPositions[band]), 3)
         << " |\n";
   }
   out << "\n";
@@ -1703,7 +1566,7 @@ static void write_human_summary(std::ostream &out, const Args &args,
          "for scripts and exact reproduction checks.\n\n";
 }
 
-static void write_stats(const Args &args, const Stats &stats) {
+static void write_stats(const Args& args, const Stats& stats) {
   fs::path parent = args.stat_path.parent_path();
   if (!parent.empty()) {
     fs::create_directories(parent);
@@ -1711,8 +1574,7 @@ static void write_stats(const Args &args, const Stats &stats) {
 
   std::ofstream out(args.stat_path);
   if (!out) {
-    throw std::runtime_error("Could not write stats file: " +
-                             args.stat_path.string());
+    throw std::runtime_error("Could not write stats file: " + args.stat_path.string());
   }
 
   write_human_summary(out, args, stats);
@@ -1729,8 +1591,7 @@ static void write_stats(const Args &args, const Stats &stats) {
   out << "%games " << stats.games << "\n";
   out << "%seed " << args.seed << "\n";
   out << "%mode " << args.mode << "\n";
-  out << "%threads " << (args.mode == "fast-parallel" ? args.threads : 1)
-      << "\n";
+  out << "%threads " << (args.mode == "fast-parallel" ? args.threads : 1) << "\n";
   out << "%maxSteps " << args.max_steps << "\n";
   out << "%maxStepGames " << stats.max_step_games << "\n";
   out << "%longestGameMoves " << stats.longest_game << "\n";
@@ -1754,8 +1615,8 @@ static void write_stats(const Args &args, const Stats &stats) {
       << stats.moments_where_one_player_had_no_legal_move << "\n";
   out << "%moves_of_all_games " << stats.moves_of_all_games << "\n";
   out << "%positions_observed " << stats.positions_observed << "\n";
-  out << "%sum_of_all_legal_moves_per_position "
-      << stats.sum_of_all_legal_moves_per_position << "\n";
+  out << "%sum_of_all_legal_moves_per_position " << stats.sum_of_all_legal_moves_per_position
+      << "\n";
   for (size_t i = 0; i < stats.legalMoveAtPos.size(); ++i) {
     out << "%legalMoveAtPos" << i << " " << stats.legalMoveAtPos[i] << "\n";
   }
@@ -1769,18 +1630,17 @@ static void write_stats(const Args &args, const Stats &stats) {
   out << "%featureMinMovesToWin " << stats.feature_min_moves_to_win << "\n";
   out << "%featureMaxMoves " << stats.feature_max_moves << "\n";
   out << "%medianMoves " << median_moves_from_hist(stats) << "\n";
-  out << "%averageMovesX1000 "
-      << avg_x1000(stats.feature_move_sum, stats.feature_tracked_games) << "\n";
+  out << "%averageMovesX1000 " << avg_x1000(stats.feature_move_sum, stats.feature_tracked_games)
+      << "\n";
   out << "%decisiveGames " << stats.decisive_games << "\n";
   out << "%sumWinningScore " << stats.sum_winning_score << "\n";
   out << "%sumLosingScore " << stats.sum_losing_score << "\n";
-  out << "%averageWinningScoreX1000 "
-      << avg_x1000(stats.sum_winning_score, stats.decisive_games) << "\n";
-  out << "%averageLosingScoreX1000 "
-      << avg_x1000(stats.sum_losing_score, stats.decisive_games) << "\n";
-  out << "%closeWinsMargin0to5 " << stats.close_wins_margin_0_to_5 << "\n";
-  out << "%blowoutWinsMargin50plus " << stats.blowout_wins_margin_50_plus
+  out << "%averageWinningScoreX1000 " << avg_x1000(stats.sum_winning_score, stats.decisive_games)
       << "\n";
+  out << "%averageLosingScoreX1000 " << avg_x1000(stats.sum_losing_score, stats.decisive_games)
+      << "\n";
+  out << "%closeWinsMargin0to5 " << stats.close_wins_margin_0_to_5 << "\n";
+  out << "%blowoutWinsMargin50plus " << stats.blowout_wins_margin_50_plus << "\n";
   out << "%maxCaptureSingleTurn " << stats.max_capture_single_turn << "\n";
   out << "\n";
 
@@ -1798,10 +1658,8 @@ static void write_stats(const Args &args, const Stats &stats) {
       out << "%blackTuzdykPos" << pos << "_" << outcome_name(outcome) << " "
           << stats.blackTuzdykPosOutcome[pos][outcome] << "\n";
     }
-    out << "%whiteTuzdykYieldPos" << pos << " " << stats.whiteTuzdykYield[pos]
-        << "\n";
-    out << "%blackTuzdykYieldPos" << pos << " " << stats.blackTuzdykYield[pos]
-        << "\n";
+    out << "%whiteTuzdykYieldPos" << pos << " " << stats.whiteTuzdykYield[pos] << "\n";
+    out << "%blackTuzdykYieldPos" << pos << " " << stats.blackTuzdykYield[pos] << "\n";
   }
   for (size_t player = 0; player < 2; ++player) {
     out << "%tuzdykBlockedBySymmetryPlayer" << player << " "
@@ -1811,12 +1669,12 @@ static void write_stats(const Args &args, const Stats &stats) {
   }
   for (size_t move = 0; move < stats.whiteTuzdykCreatedAtMove.size(); ++move) {
     if (stats.whiteTuzdykCreatedAtMove[move] != 0) {
-      out << "%whiteTuzdykCreatedAtMove" << move << " "
-          << stats.whiteTuzdykCreatedAtMove[move] << "\n";
+      out << "%whiteTuzdykCreatedAtMove" << move << " " << stats.whiteTuzdykCreatedAtMove[move]
+          << "\n";
     }
     if (stats.blackTuzdykCreatedAtMove[move] != 0) {
-      out << "%blackTuzdykCreatedAtMove" << move << " "
-          << stats.blackTuzdykCreatedAtMove[move] << "\n";
+      out << "%blackTuzdykCreatedAtMove" << move << " " << stats.blackTuzdykCreatedAtMove[move]
+          << "\n";
     }
   }
   out << "\n";
@@ -1838,8 +1696,8 @@ static void write_stats(const Args &args, const Stats &stats) {
 
   for (size_t player = 0; player < 2; ++player) {
     for (size_t outcome = 0; outcome < OUTCOME_COUNT; ++outcome) {
-      out << "%atsyrauByPlayer" << player << "_" << outcome_name(outcome)
-          << " " << stats.atsyrauByPlayerOutcome[player][outcome] << "\n";
+      out << "%atsyrauByPlayer" << player << "_" << outcome_name(outcome) << " "
+          << stats.atsyrauByPlayerOutcome[player][outcome] << "\n";
     }
     out << "%atsyrauOpponentCaptureByPlayer" << player << " "
         << stats.atsyrauOpponentCaptureSum[player] << "\n";
@@ -1848,13 +1706,10 @@ static void write_stats(const Args &args, const Stats &stats) {
          "won by 82+ before no-legal-move checking.\n";
   for (size_t player = 0; player < 2; ++player) {
     for (size_t outcome = 0; outcome < OUTCOME_COUNT; ++outcome) {
-      out << "%officialAtsyrauByPlayer" << player << "_"
-          << outcome_name(outcome) << " "
+      out << "%officialAtsyrauByPlayer" << player << "_" << outcome_name(outcome) << " "
           << stats.officialAtsyrauByPlayerOutcome[player][outcome] << "\n";
-      out << "%noLegalAfterScoreWinByPlayer" << player << "_"
-          << outcome_name(outcome) << " "
-          << stats.noLegalAfterScoreWinByPlayerOutcome[player][outcome]
-          << "\n";
+      out << "%noLegalAfterScoreWinByPlayer" << player << "_" << outcome_name(outcome) << " "
+          << stats.noLegalAfterScoreWinByPlayerOutcome[player][outcome] << "\n";
     }
     out << "%officialAtsyrauOpponentCaptureByPlayer" << player << " "
         << stats.officialAtsyrauOpponentCaptureSum[player] << "\n";
@@ -1886,8 +1741,7 @@ static void write_stats(const Args &args, const Stats &stats) {
   }
   for (size_t move = 0; move < stats.gameLengthMoves.size(); ++move) {
     if (stats.gameLengthMoves[move] != 0) {
-      out << "%gameLengthMoves" << move << " " << stats.gameLengthMoves[move]
-          << "\n";
+      out << "%gameLengthMoves" << move << " " << stats.gameLengthMoves[move] << "\n";
     }
   }
   out << "%gameLengthMovesOverflow " << stats.gameLengthMovesOverflow << "\n";
@@ -1898,80 +1752,63 @@ static void write_stats(const Args &args, const Stats &stats) {
   out << "# Side kumalak sums are stones in the nine pits before that move; "
          "total side excludes kazans.\n";
   out << "%exactMoveTrackedGames " << stats.exactMoveTrackedGames << "\n";
-  for (size_t move = 0; move < stats.branchingExactMovePositions.size();
-       ++move) {
+  for (size_t move = 0; move < stats.branchingExactMovePositions.size(); ++move) {
     if (stats.branchingExactMovePositions[move] == 0) {
       continue;
     }
-    out << "%branchingExactMovePositions" << move << " "
-        << stats.branchingExactMovePositions[move] << "\n";
+    out << "%branchingExactMovePositions" << move << " " << stats.branchingExactMovePositions[move]
+        << "\n";
     out << "%branchingExactMoveLegalMoveSum" << move << " "
         << stats.branchingExactMoveLegalMoveSum[move] << "\n";
     out << "%branchingExactMove" << move << "AverageLegalMovesX1000 "
         << avg_x1000(stats.branchingExactMoveLegalMoveSum[move],
                      stats.branchingExactMovePositions[move])
         << "\n";
-    out << "%whiteSideKumalakSumAtMove" << move << " "
-        << stats.whiteSideKumalakSumAtMove[move] << "\n";
-    out << "%blackSideKumalakSumAtMove" << move << " "
-        << stats.blackSideKumalakSumAtMove[move] << "\n";
-    out << "%totalSideKumalakSumAtMove" << move << " "
-        << stats.totalSideKumalakSumAtMove[move] << "\n";
-    out << "%whiteKazanSumAtMove" << move << " "
-        << stats.whiteKazanSumAtMove[move] << "\n";
-    out << "%blackKazanSumAtMove" << move << " "
-        << stats.blackKazanSumAtMove[move] << "\n";
+    out << "%whiteSideKumalakSumAtMove" << move << " " << stats.whiteSideKumalakSumAtMove[move]
+        << "\n";
+    out << "%blackSideKumalakSumAtMove" << move << " " << stats.blackSideKumalakSumAtMove[move]
+        << "\n";
+    out << "%totalSideKumalakSumAtMove" << move << " " << stats.totalSideKumalakSumAtMove[move]
+        << "\n";
+    out << "%whiteKazanSumAtMove" << move << " " << stats.whiteKazanSumAtMove[move] << "\n";
+    out << "%blackKazanSumAtMove" << move << " " << stats.blackKazanSumAtMove[move] << "\n";
   }
-  out << "%branchingExactMovePositionsOverflow "
-      << stats.branchingExactMovePositionsOverflow << "\n";
-  out << "%branchingExactMoveLegalMoveSumOverflow "
-      << stats.branchingExactMoveLegalMoveSumOverflow << "\n";
-  out << "%whiteSideKumalakSumAtMoveOverflow "
-      << stats.whiteSideKumalakSumAtMoveOverflow << "\n";
-  out << "%blackSideKumalakSumAtMoveOverflow "
-      << stats.blackSideKumalakSumAtMoveOverflow << "\n";
-  out << "%totalSideKumalakSumAtMoveOverflow "
-      << stats.totalSideKumalakSumAtMoveOverflow << "\n";
-  out << "%whiteKazanSumAtMoveOverflow "
-      << stats.whiteKazanSumAtMoveOverflow << "\n";
-  out << "%blackKazanSumAtMoveOverflow "
-      << stats.blackKazanSumAtMoveOverflow << "\n";
+  out << "%branchingExactMovePositionsOverflow " << stats.branchingExactMovePositionsOverflow
+      << "\n";
+  out << "%branchingExactMoveLegalMoveSumOverflow " << stats.branchingExactMoveLegalMoveSumOverflow
+      << "\n";
+  out << "%whiteSideKumalakSumAtMoveOverflow " << stats.whiteSideKumalakSumAtMoveOverflow << "\n";
+  out << "%blackSideKumalakSumAtMoveOverflow " << stats.blackSideKumalakSumAtMoveOverflow << "\n";
+  out << "%totalSideKumalakSumAtMoveOverflow " << stats.totalSideKumalakSumAtMoveOverflow << "\n";
+  out << "%whiteKazanSumAtMoveOverflow " << stats.whiteKazanSumAtMoveOverflow << "\n";
+  out << "%blackKazanSumAtMoveOverflow " << stats.blackKazanSumAtMoveOverflow << "\n";
   out << "\n";
 
   out << "# Branching bands: 0=moves 1..20, 1=moves 21..60, 2=moves 61+.\n";
   for (size_t band = 0; band < BRANCHING_BAND_COUNT; ++band) {
-    out << "%branchingBandPositions" << band << " "
-        << stats.branchingPositions[band] << "\n";
-    out << "%branchingBandLegalMoveSum" << band << " "
-        << stats.branchingLegalMoveSum[band] << "\n";
+    out << "%branchingBandPositions" << band << " " << stats.branchingPositions[band] << "\n";
+    out << "%branchingBandLegalMoveSum" << band << " " << stats.branchingLegalMoveSum[band] << "\n";
     out << "%branchingBand" << band << "AverageLegalMovesX1000 "
-        << avg_x1000(stats.branchingLegalMoveSum[band],
-                     stats.branchingPositions[band])
-        << "\n";
+        << avg_x1000(stats.branchingLegalMoveSum[band], stats.branchingPositions[band]) << "\n";
   }
 }
 
-static void print_benchmark_row(const std::string &name, double seconds,
-                                const Stats &stats) {
+static void print_benchmark_row(const std::string& name, double seconds, const Stats& stats) {
   double games_per_second = static_cast<double>(stats.games) / seconds;
-  double moves_per_second =
-      static_cast<double>(stats.moves_of_all_games) / seconds;
+  double moves_per_second = static_cast<double>(stats.moves_of_all_games) / seconds;
 
-  std::cout << std::left << std::setw(18) << name << std::right << std::setw(10)
-            << std::fixed << std::setprecision(3) << seconds << std::setw(15)
-            << std::fixed << std::setprecision(0) << games_per_second
-            << std::setw(15) << std::fixed << std::setprecision(0)
-            << moves_per_second << std::setw(14) << stats.moves_of_all_games
+  std::cout << std::left << std::setw(18) << name << std::right << std::setw(10) << std::fixed
+            << std::setprecision(3) << seconds << std::setw(15) << std::fixed
+            << std::setprecision(0) << games_per_second << std::setw(15) << std::fixed
+            << std::setprecision(0) << moves_per_second << std::setw(14) << stats.moves_of_all_games
             << "\n";
 }
 
 static void run_benchmark(Args args) {
-  std::cout << "Benchmarking " << args.num_games << " games, seed " << args.seed
-            << ", max steps " << args.max_steps << ", threads " << args.threads
-            << "\n";
-  std::cout << std::left << std::setw(18) << "mode" << std::right
-            << std::setw(10) << "seconds" << std::setw(15) << "games/s"
-            << std::setw(15) << "moves/s" << std::setw(14) << "moves"
+  std::cout << "Benchmarking " << args.num_games << " games, seed " << args.seed << ", max steps "
+            << args.max_steps << ", threads " << args.threads << "\n";
+  std::cout << std::left << std::setw(18) << "mode" << std::right << std::setw(10) << "seconds"
+            << std::setw(15) << "games/s" << std::setw(15) << "moves/s" << std::setw(14) << "moves"
             << "\n";
   std::cout << std::string(72, '-') << "\n";
 
@@ -1979,7 +1816,7 @@ static void run_benchmark(Args args) {
       "env", "env-fast-rng", "fast", "fast-prebuffer", "fast-parallel",
   };
 
-  for (const std::string &mode : modes) {
+  for (const std::string& mode : modes) {
     args.mode = mode;
     auto start = std::chrono::steady_clock::now();
     Stats stats = run_mode(args);
@@ -1989,7 +1826,7 @@ static void run_benchmark(Args args) {
   }
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   try {
     Args args = parse_args(argc, argv);
 
@@ -2001,8 +1838,7 @@ int main(int argc, char *argv[]) {
     Stats stats = args.fresh_output ? Stats{} : read_existing_stats(args.stat_path);
     if (args.format_only) {
       write_stats(args, stats);
-      std::cout << "Reformatted " << args.stat_path << " (games: "
-                << stats.games << ")\n";
+      std::cout << "Reformatted " << args.stat_path << " (games: " << stats.games << ")\n";
       return 0;
     }
 
@@ -2013,17 +1849,16 @@ int main(int argc, char *argv[]) {
     merge_stats(stats, run_stats);
 
     write_stats(args, stats);
-    std::cout << "Played " << run_stats.games << " random games in "
-              << std::fixed << std::setprecision(3) << seconds << "s";
+    std::cout << "Played " << run_stats.games << " random games in " << std::fixed
+              << std::setprecision(3) << seconds << "s";
     if (seconds > 0.0) {
       std::cout << " (" << std::fixed << std::setprecision(0)
-                << static_cast<double>(run_stats.games) / seconds
-                << " games/s)";
+                << static_cast<double>(run_stats.games) / seconds << " games/s)";
     }
-    std::cout << ".\nStats saved to " << args.stat_path << " (total games: "
-              << stats.games << ")\n";
+    std::cout << ".\nStats saved to " << args.stat_path << " (total games: " << stats.games
+              << ")\n";
     return 0;
-  } catch (const std::exception &ex) {
+  } catch (const std::exception& ex) {
     std::cerr << "generate_billion_games: " << ex.what() << "\n";
     return 1;
   }

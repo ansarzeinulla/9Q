@@ -1,13 +1,8 @@
-#include "togyz/minimax_engine.hpp"
-#include "togyz/dag_search.hpp"
-#include "togyz/evaluation.hpp"
-#include "togyz/togyzkumalak_rules.hpp"
-#include "togyz/position_hash.hpp"
 #include <algorithm>
 #include <array>
 #include <atomic>
-#include <chrono>
 #include <cctype>
+#include <chrono>
 #include <cstdint>
 #include <fstream>
 #include <future>
@@ -24,6 +19,12 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+#include "togyz/dag_search.hpp"
+#include "togyz/evaluation.hpp"
+#include "togyz/minimax_engine.hpp"
+#include "togyz/position_hash.hpp"
+#include "togyz/togyzkumalak_rules.hpp"
 
 using namespace std;
 
@@ -57,7 +58,7 @@ struct Args {
   bool benchmark = false;
 };
 
-Args parse_args(int argc, char *argv[]) {
+Args parse_args(int argc, char* argv[]) {
   Args args;
   for (int i = 1; i < argc; ++i) {
     string arg = argv[i];
@@ -69,8 +70,7 @@ Args parse_args(int argc, char *argv[]) {
       args.numgames = stoi(argv[++i]);
     } else if (arg == "--depth" && i + 1 < argc) {
       args.depth = stoi(argv[++i]);
-    } else if ((arg == "--positions" || arg == "--numpositions") &&
-               i + 1 < argc) {
+    } else if ((arg == "--positions" || arg == "--numpositions") && i + 1 < argc) {
       args.positions = stoi(argv[++i]);
     } else if ((arg == "--bot" || arg == "--benchmark-bot") && i + 1 < argc) {
       args.benchmark_bot = argv[++i];
@@ -84,16 +84,14 @@ Args parse_args(int argc, char *argv[]) {
       args.max_total_reduction = stoi(argv[++i]);
     } else if (arg == "--max-steps" && i + 1 < argc) {
       args.max_steps = stoi(argv[++i]);
-    } else if ((arg == "--move-time" || arg == "--time-per-move" ||
-                arg == "--seconds-per-move") &&
+    } else if ((arg == "--move-time" || arg == "--time-per-move" || arg == "--seconds-per-move") &&
                i + 1 < argc) {
       args.move_time_seconds = stod(argv[++i]);
     } else if (arg == "--movetime-ms" && i + 1 < argc) {
       args.move_time_seconds = stod(argv[++i]) / 1000.0;
     } else if (arg == "--max-search-depth" && i + 1 < argc) {
       args.max_search_depth = stoi(argv[++i]);
-    } else if ((arg == "--dataset" || arg == "--dataset-file" ||
-                arg == "--training-data") &&
+    } else if ((arg == "--dataset" || arg == "--dataset-file" || arg == "--training-data") &&
                i + 1 < argc) {
       args.dataset_file = argv[++i];
     } else if (arg == "--p1" && i + 1 < argc) {
@@ -108,8 +106,7 @@ Args parse_args(int argc, char *argv[]) {
       args.uci = true;
     } else if (arg == "--compare") {
       args.compare = true;
-    } else if (arg == "--benchmark" || arg == "--bench" ||
-               arg == "--time-bots") {
+    } else if (arg == "--benchmark" || arg == "--bench" || arg == "--time-bots") {
       args.benchmark = true;
     }
   }
@@ -118,18 +115,16 @@ Args parse_args(int argc, char *argv[]) {
 
 using EvaluatorMap = array<shared_ptr<Evaluator>, 2>;
 
-shared_ptr<Evaluator> create_evaluator(const string &spec) {
+shared_ptr<Evaluator> create_evaluator(const string& spec) {
   if (spec == "heuristic") {
     return make_shared<HeuristicEvaluator>();
   }
 
-  throw runtime_error("Unsupported evaluator '" + spec +
-                      "'. Use heuristic.");
+  throw runtime_error("Unsupported evaluator '" + spec + "'. Use heuristic.");
 }
 
-EvaluatorMap build_evaluators(const Args &args) {
-  return {create_evaluator(args.p1_evaluator),
-          create_evaluator(args.p2_evaluator)};
+EvaluatorMap build_evaluators(const Args& args) {
+  return {create_evaluator(args.p1_evaluator), create_evaluator(args.p2_evaluator)};
 }
 
 constexpr int TRAINING_STATE_SIZE = 23;
@@ -138,7 +133,7 @@ struct TrainingExample {
   array<int, TRAINING_STATE_SIZE> state;
 };
 
-array<int, TRAINING_STATE_SIZE> encode_training_state(const ToguzEnv &env) {
+array<int, TRAINING_STATE_SIZE> encode_training_state(const ToguzEnv& env) {
   array<int, TRAINING_STATE_SIZE> state{};
   for (int pit = 0; pit < NUM_PITS * 2; ++pit) {
     state[pit] = env.board.get(pit);
@@ -151,27 +146,24 @@ array<int, TRAINING_STATE_SIZE> encode_training_state(const ToguzEnv &env) {
   return state;
 }
 
-TrainingExample capture_training_example(const ToguzEnv &env) {
+TrainingExample capture_training_example(const ToguzEnv& env) {
   return TrainingExample{encode_training_state(env)};
 }
 
-double training_label_for_result(const ToguzEnv &env) {
-  if (env.winner_code == PLAYER_1)
-    return 1.0;
-  if (env.winner_code == PLAYER_2)
-    return 0.0;
+double training_label_for_result(const ToguzEnv& env) {
+  if (env.winner_code == PLAYER_1) return 1.0;
+  if (env.winner_code == PLAYER_2) return 0.0;
   return 0.5;
 }
 
 class DatasetWriter {
-public:
+ public:
   explicit DatasetWriter(string output_path) : path(std::move(output_path)) {}
 
   bool enabled() const { return !path.empty(); }
 
-  void append_game(const vector<TrainingExample> &examples, double label) {
-    if (!enabled() || examples.empty())
-      return;
+  void append_game(const vector<TrainingExample>& examples, double label) {
+    if (!enabled() || examples.empty()) return;
 
     lock_guard<mutex> lock(write_mutex);
     ofstream out(path, ios::app);
@@ -179,25 +171,24 @@ public:
       throw runtime_error("Could not open dataset file for append: " + path);
     }
 
-    for (const auto &example : examples) {
+    for (const auto& example : examples) {
       out << "{\"state\":[";
       for (size_t i = 0; i < example.state.size(); ++i) {
-        if (i > 0)
-          out << ",";
+        if (i > 0) out << ",";
         out << example.state[i];
       }
       out << "],\"label\":" << fixed << setprecision(1) << label << "}\n";
     }
   }
 
-  const string &output_path() const { return path; }
+  const string& output_path() const { return path; }
 
-private:
+ private:
   string path;
   mutex write_mutex;
 };
 
-int human_move(ToguzEnv &env, bool quiet) {
+int human_move(ToguzEnv& env, bool quiet) {
   auto legal_moves = env.generate_moves();
   if (!quiet) {
     cout << "Legal moves: ";
@@ -210,16 +201,13 @@ int human_move(ToguzEnv &env, bool quiet) {
   while (true) {
     cout << "Choose pit (1-9), or type q to quit: ";
     string raw;
-    if (!(cin >> raw))
-      return -1;
+    if (!(cin >> raw)) return -1;
 
-    if (raw == "q" || raw == "quit" || raw == "exit")
-      return -1;
+    if (raw == "q" || raw == "quit" || raw == "exit") return -1;
 
     bool is_num = true;
     for (char c : raw)
-      if (!isdigit(c))
-        is_num = false;
+      if (!isdigit(c)) is_num = false;
 
     if (!is_num) {
       cout << "Please enter a number from 1 to 9.\n";
@@ -227,8 +215,7 @@ int human_move(ToguzEnv &env, bool quiet) {
     }
 
     int move = stoi(raw) - 1;
-    if (find(legal_moves.begin(), legal_moves.end(), move) ==
-        legal_moves.end()) {
+    if (find(legal_moves.begin(), legal_moves.end(), move) == legal_moves.end()) {
       cout << "Illegal move for this position. Try again.\n";
       continue;
     }
@@ -243,23 +230,20 @@ struct TimedBotResult {
   uint64_t nodes = 0;
 };
 
-TimedBotResult timed_bot_move(ToguzEnv &env, const string &kind,
-                              double move_time_seconds, int max_depth,
-                              const Evaluator &evaluator) {
+TimedBotResult timed_bot_move(ToguzEnv& env, const string& kind, double move_time_seconds,
+                              int max_depth, const Evaluator& evaluator) {
   TimedBotResult result;
   if (kind == "randombot") {
     result.move = env.get_random_move();
     return result;
   } else if (kind == "ai") {
-    auto search = minimax_engine::get_best_move_timed(
-        env, move_time_seconds, max_depth, evaluator);
+    auto search = minimax_engine::get_best_move_timed(env, move_time_seconds, max_depth, evaluator);
     result.move = search.move;
     result.completed_depth = search.completed_depth;
     result.eval = search.eval;
     return result;
   } else if (kind == "dag") {
-    auto search = dag_search::get_best_move_timed(
-        env, move_time_seconds, max_depth, evaluator);
+    auto search = dag_search::get_best_move_timed(env, move_time_seconds, max_depth, evaluator);
     result.move = search.move;
     result.completed_depth = search.completed_depth;
     result.eval = search.eval;
@@ -270,11 +254,10 @@ TimedBotResult timed_bot_move(ToguzEnv &env, const string &kind,
   }
 }
 
-int bot_move(ToguzEnv &env, double move_time_seconds, int max_depth,
-             const string &kind, bool quiet, const Evaluator &evaluator) {
+int bot_move(ToguzEnv& env, double move_time_seconds, int max_depth, const string& kind, bool quiet,
+             const Evaluator& evaluator) {
   auto start = chrono::high_resolution_clock::now();
-  TimedBotResult result =
-      timed_bot_move(env, kind, move_time_seconds, max_depth, evaluator);
+  TimedBotResult result = timed_bot_move(env, kind, move_time_seconds, max_depth, evaluator);
   auto end = chrono::high_resolution_clock::now();
   chrono::duration<double> elapsed = end - start;
 
@@ -284,13 +267,12 @@ int bot_move(ToguzEnv &env, double move_time_seconds, int max_depth,
 
   if (!quiet) {
     if (kind == "randombot") {
-      cout << "RandomBot chooses pit " << (result.move + 1) << " (" << fixed
-           << setprecision(3) << elapsed.count() << "s)\n";
+      cout << "RandomBot chooses pit " << (result.move + 1) << " (" << fixed << setprecision(3)
+           << elapsed.count() << "s)\n";
     } else {
-      cout << (kind == "dag" ? "DAG search" : "Minimax") << " chooses pit "
-           << (result.move + 1) << " (time=" << fixed << setprecision(4)
-           << move_time_seconds << "s, completed depth="
-           << result.completed_depth << ", elapsed=" << setprecision(4)
+      cout << (kind == "dag" ? "DAG search" : "Minimax") << " chooses pit " << (result.move + 1)
+           << " (time=" << fixed << setprecision(4) << move_time_seconds
+           << "s, completed depth=" << result.completed_depth << ", elapsed=" << setprecision(4)
            << elapsed.count() << "s)\n";
     }
   }
@@ -302,14 +284,14 @@ struct PlayerConfig {
   int depth = -1;
 };
 
-PlayerConfig parse_controller(const string &str) {
+PlayerConfig parse_controller(const string& str) {
   PlayerConfig pc;
   if (str.length() >= 2 && str.substr(0, 2) == "ai") {
     pc.kind = "ai";
     if (str.length() > 2) {
       pc.depth = stoi(str.substr(2));
     } else {
-      pc.depth = 3; // default depth
+      pc.depth = 3;  // default depth
     }
   } else if (str.length() >= 3 && str.substr(0, 3) == "dag") {
     pc.kind = "dag";
@@ -332,7 +314,7 @@ PlayerConfig parse_controller(const string &str) {
   return pc;
 }
 
-map<int, PlayerConfig> build_controllers(const string &mode, bool p1_is_black) {
+map<int, PlayerConfig> build_controllers(const string& mode, bool p1_is_black) {
   size_t dash = mode.find('-');
   string p1_kind_str = mode.substr(0, dash);
   string p2_kind_str = mode.substr(dash + 1);
@@ -342,8 +324,8 @@ map<int, PlayerConfig> build_controllers(const string &mode, bool p1_is_black) {
 
   map<int, PlayerConfig> controllers;
   if (p1_is_black) {
-    controllers[0] = p1_kind; // PLAYER_1 is 0
-    controllers[1] = p2_kind; // PLAYER_2 is 1
+    controllers[0] = p1_kind;  // PLAYER_1 is 0
+    controllers[1] = p2_kind;  // PLAYER_2 is 1
   } else {
     controllers[0] = p2_kind;
     controllers[1] = p1_kind;
@@ -351,7 +333,7 @@ map<int, PlayerConfig> build_controllers(const string &mode, bool p1_is_black) {
   return controllers;
 }
 
-int prepare_start_position(ToguzEnv &env, const string &position) {
+int prepare_start_position(ToguzEnv& env, const string& position) {
   if (position == "random") {
     return env.setup_random_position();
   }
@@ -363,18 +345,13 @@ int prepare_start_position(ToguzEnv &env, const string &position) {
   return 0;
 }
 
-bool play_single_terminal_game(ToguzEnv &env,
-                               const map<int, PlayerConfig> &controllers,
-                               const EvaluatorMap &evaluators,
-                               double move_time_seconds,
-                               int max_search_depth,
-                               bool quiet,
-                               DatasetWriter *dataset_writer = nullptr) {
-  auto get_name = [](const PlayerConfig &pc) {
-    if (pc.kind == "ai")
-      return string("minimax-ai-timed");
-    if (pc.kind == "dag")
-      return string("dag-ai-timed");
+bool play_single_terminal_game(ToguzEnv& env, const map<int, PlayerConfig>& controllers,
+                               const EvaluatorMap& evaluators, double move_time_seconds,
+                               int max_search_depth, bool quiet,
+                               DatasetWriter* dataset_writer = nullptr) {
+  auto get_name = [](const PlayerConfig& pc) {
+    if (pc.kind == "ai") return string("minimax-ai-timed");
+    if (pc.kind == "dag") return string("dag-ai-timed");
     return pc.kind;
   };
   string p1_name = get_name(controllers.at(PLAYER_1));
@@ -403,28 +380,26 @@ bool play_single_terminal_game(ToguzEnv &env,
     if (kind == "human") {
       move = human_move(env, quiet);
       if (move == -1) {
-        if (!quiet)
-          cout << "Game interrupted by user.\n";
+        if (!quiet) cout << "Game interrupted by user.\n";
         return false;
       }
     } else {
-      move = bot_move(env, move_time_seconds, max_search_depth, kind, quiet,
-                      *evaluators[player_id]);
+      move =
+          bot_move(env, move_time_seconds, max_search_depth, kind, quiet, *evaluators[player_id]);
     }
 
     env.step(move);
     if (dataset_writer != nullptr && dataset_writer->enabled()) {
       training_examples.push_back(capture_training_example(env));
     }
-    if (!quiet)
-      cout << "\n";
+    if (!quiet) cout << "\n";
   }
 
   if (!quiet) {
     env.render("terminal", p1_name, p2_name);
     cout << "Final result: " << env.get_result_string() << "\n";
-    cout << "Kazans: " << p1_name << "=" << env.kazans[0] << ", " << p2_name
-         << "=" << env.kazans[1] << "\n";
+    cout << "Kazans: " << p1_name << "=" << env.kazans[0] << ", " << p2_name << "=" << env.kazans[1]
+         << "\n";
   }
   if (dataset_writer != nullptr && dataset_writer->enabled()) {
     dataset_writer->append_game(training_examples, training_label_for_result(env));
@@ -432,7 +407,7 @@ bool play_single_terminal_game(ToguzEnv &env,
   return true;
 }
 
-string logical_winner(const ToguzEnv &env, bool p1_is_black) {
+string logical_winner(const ToguzEnv& env, bool p1_is_black) {
   if (env.winner_code == PLAYER_1) {
     return p1_is_black ? "P1" : "P2";
   }
@@ -449,8 +424,7 @@ struct Stat {
   int draw = 0;
 };
 
-void update_stats(map<string, Stat> &stats, bool p1_is_black,
-                  const string &winner) {
+void update_stats(map<string, Stat>& stats, bool p1_is_black, const string& winner) {
   stats["total"].games++;
   if (winner == "P1")
     stats["total"].p1_win++;
@@ -470,12 +444,11 @@ void update_stats(map<string, Stat> &stats, bool p1_is_black,
 }
 
 double safe_pct(int n, int d) {
-  if (d == 0)
-    return 0.0;
+  if (d == 0) return 0.0;
   return 100.0 * (double)n / (double)d;
 }
 
-void print_summary(const map<string, Stat> &stats) {
+void print_summary(const map<string, Stat>& stats) {
   auto b = stats.at("p1_white");
   int d = b.games;
   double p1_white_win = safe_pct(b.p1_win, d);
@@ -496,15 +469,14 @@ void print_summary(const map<string, Stat> &stats) {
 
   cout << "\n=== Statistics ===\n";
   cout << "P1 white vs P2 black\n";
-  cout << "win% " << fixed << setprecision(1) << p1_white_win << "  draw% "
-       << p1_white_draw << "  lose% " << p1_white_lose << "\n";
+  cout << "win% " << fixed << setprecision(1) << p1_white_win << "  draw% " << p1_white_draw
+       << "  lose% " << p1_white_lose << "\n";
   cout << "P2 white vs P1 black\n";
-  cout << "win% " << p2_white_win << "  draw% " << p2_white_draw << "  lose% "
-       << p2_white_lose << "\n";
+  cout << "win% " << p2_white_win << "  draw% " << p2_white_draw << "  lose% " << p2_white_lose
+       << "\n";
   cout << "Total\n";
   cout << "P1 vs P2\n";
-  cout << "win% " << total_win << "  draw% " << total_draw << "  lose% "
-       << total_lose << "\n";
+  cout << "win% " << total_win << "  draw% " << total_draw << "  lose% " << total_lose << "\n";
 }
 
 struct CompareStats {
@@ -520,19 +492,15 @@ struct CompareStats {
   long long total_reduction_sum = 0;
 };
 
-int fixed_depth_move(const ToguzEnv &env, const string &kind, int depth,
-                     const Evaluator &evaluator) {
-  if (kind == "ai")
-    return minimax_engine::get_best_move(env, depth, evaluator);
-  if (kind == "dag")
-    return dag_search::get_best_move(env, depth, evaluator);
+int fixed_depth_move(const ToguzEnv& env, const string& kind, int depth,
+                     const Evaluator& evaluator) {
+  if (kind == "ai") return minimax_engine::get_best_move(env, depth, evaluator);
+  if (kind == "dag") return dag_search::get_best_move(env, depth, evaluator);
   throw runtime_error("Unsupported comparison bot: " + kind);
 }
 
-string play_comparison_game(const ToguzEnv &start, const string &p1_kind,
-                            const string &p2_kind, int depth,
-                            const EvaluatorMap &evaluators,
-                            CompareStats &stats) {
+string play_comparison_game(const ToguzEnv& start, const string& p1_kind, const string& p2_kind,
+                            int depth, const EvaluatorMap& evaluators, CompareStats& stats) {
   ToguzEnv env = start;
   array<string, 2> kinds = {p1_kind, p2_kind};
 
@@ -567,7 +535,7 @@ string play_comparison_game(const ToguzEnv &start, const string &p1_kind,
   return "minimax";
 }
 
-void run_fixed_depth_comparison(const Args &args) {
+void run_fixed_depth_comparison(const Args& args) {
   if (args.depth < 1) {
     throw runtime_error("--depth must be >= 1 for comparison.");
   }
@@ -583,10 +551,8 @@ void run_fixed_depth_comparison(const Args &args) {
   EvaluatorMap evaluators = build_evaluators(args);
 
   cout << "=== Fixed-depth bot comparison ===\n";
-  cout << "Minimax bot: ai" << args.depth << "  DAG bot: dag" << args.depth
-       << "\n";
-  cout << "Positions: " << args.positions
-       << " balanced reduced starts, seed=" << args.seed << "\n";
+  cout << "Minimax bot: ai" << args.depth << "  DAG bot: dag" << args.depth << "\n";
+  cout << "Positions: " << args.positions << " balanced reduced starts, seed=" << args.seed << "\n";
   cout << "Evaluators: P1=" << evaluators[PLAYER_1]->description()
        << "  P2=" << evaluators[PLAYER_2]->description() << "\n";
   cout << "Randomization: each side subtracts 1.." << args.max_reduction_per_pit
@@ -595,15 +561,14 @@ void run_fixed_depth_comparison(const Args &args) {
   for (int i = 0; i < args.positions; ++i) {
     ToguzEnv start;
     start.max_steps = args.max_steps;
-    int reduction = start.setup_balanced_reduced_position(
-        rng, args.max_reduction_per_pit, args.max_total_reduction);
+    int reduction = start.setup_balanced_reduced_position(rng, args.max_reduction_per_pit,
+                                                          args.max_total_reduction);
     stats.positions++;
     stats.total_reduction_sum += reduction;
 
-    int minimax_first = minimax_engine::get_best_move(
-        start, args.depth, *evaluators[start.to_play]);
-    int dag_first = dag_search::get_best_move(
-        start, args.depth, *evaluators[start.to_play]);
+    int minimax_first =
+        minimax_engine::get_best_move(start, args.depth, *evaluators[start.to_play]);
+    int dag_first = dag_search::get_best_move(start, args.depth, *evaluators[start.to_play]);
     if (minimax_first == dag_first)
       stats.first_move_agreements++;
     else
@@ -613,30 +578,26 @@ void run_fixed_depth_comparison(const Args &args) {
     play_comparison_game(start, "dag", "ai", args.depth, evaluators, stats);
 
     if (!args.noterminal && ((i + 1) % 10 == 0 || i + 1 == args.positions)) {
-      cout << "Processed " << (i + 1) << "/" << args.positions
-           << " positions\r" << flush;
+      cout << "Processed " << (i + 1) << "/" << args.positions << " positions\r" << flush;
     }
   }
 
-  if (!args.noterminal)
-    cout << "\n";
+  if (!args.noterminal) cout << "\n";
 
   cout << "\n=== Comparison Results ===\n";
-  cout << "Games: " << stats.games << " (" << stats.positions
-       << " positions x 2 color orders)\n";
-  cout << "DAG wins: " << stats.dag_wins << "  minimax wins: "
-       << stats.minimax_wins << "  draws: " << stats.draws << "\n";
+  cout << "Games: " << stats.games << " (" << stats.positions << " positions x 2 color orders)\n";
+  cout << "DAG wins: " << stats.dag_wins << "  minimax wins: " << stats.minimax_wins
+       << "  draws: " << stats.draws << "\n";
   cout << fixed << setprecision(1);
   cout << "DAG win%: " << safe_pct(stats.dag_wins, stats.games)
        << "  minimax win%: " << safe_pct(stats.minimax_wins, stats.games)
        << "  draw%: " << safe_pct(stats.draws, stats.games) << "\n";
-  cout << "First-move agreement: " << stats.first_move_agreements << "/"
-       << stats.positions << " ("
+  cout << "First-move agreement: " << stats.first_move_agreements << "/" << stats.positions << " ("
        << safe_pct(stats.first_move_agreements, stats.positions) << "%)\n";
   cout << "Average equal reduction per side: "
        << (double)stats.total_reduction_sum / (double)stats.positions << "\n";
-  cout << "Average DAG margin per game: "
-       << (double)stats.dag_margin_sum / (double)stats.games << "\n";
+  cout << "Average DAG margin per game: " << (double)stats.dag_margin_sum / (double)stats.games
+       << "\n";
 }
 
 struct StartPosition {
@@ -651,7 +612,7 @@ struct StartPosition {
   vector<uint64_t> history_stack;
 };
 
-StartPosition capture_start_position(const ToguzEnv &env, int reduction) {
+StartPosition capture_start_position(const ToguzEnv& env, int reduction) {
   StartPosition start;
   start.board = env.board;
   start.kazans = env.kazans;
@@ -665,7 +626,7 @@ StartPosition capture_start_position(const ToguzEnv &env, int reduction) {
   return start;
 }
 
-void apply_start_position(ToguzEnv &env, const StartPosition &start) {
+void apply_start_position(ToguzEnv& env, const StartPosition& start) {
   env.board = start.board;
   env.kazans = start.kazans;
   env.tuzduks = start.tuzduks;
@@ -676,21 +637,21 @@ void apply_start_position(ToguzEnv &env, const StartPosition &start) {
   env.history_stack = start.history_stack;
 }
 
-vector<StartPosition> make_balanced_start_positions(const Args &args) {
+vector<StartPosition> make_balanced_start_positions(const Args& args) {
   mt19937_64 rng(args.seed);
   ToguzEnv env;
   env.max_steps = args.max_steps;
   vector<StartPosition> starts;
   starts.reserve(args.positions);
   for (int i = 0; i < args.positions; ++i) {
-    int reduction = env.setup_balanced_reduced_position(
-        rng, args.max_reduction_per_pit, args.max_total_reduction);
+    int reduction = env.setup_balanced_reduced_position(rng, args.max_reduction_per_pit,
+                                                        args.max_total_reduction);
     starts.push_back(capture_start_position(env, reduction));
   }
   return starts;
 }
 
-string board_snapshot(const ToguzEnv &env, int ply, int mover, int move) {
+string board_snapshot(const ToguzEnv& env, int ply, int mover, int move) {
   stringstream out;
   out << "ply " << ply;
   if (move >= 0) {
@@ -698,12 +659,10 @@ string board_snapshot(const ToguzEnv &env, int ply, int mover, int move) {
   } else {
     out << " initial";
   }
-  out << " next=P" << (env.to_play + 1) << " steps=" << env.steps
-      << " winner=" << env.winner_code << " hash=" << env.position_hash()
-      << "\n";
+  out << " next=P" << (env.to_play + 1) << " steps=" << env.steps << " winner=" << env.winner_code
+      << " hash=" << env.position_hash() << "\n";
   out << "kazans P1=" << env.kazans[0] << " P2=" << env.kazans[1]
-      << " tuzduks P1=" << (env.tuzduks[0] + 1)
-      << " P2=" << (env.tuzduks[1] + 1) << "\n";
+      << " tuzduks P1=" << (env.tuzduks[0] + 1) << " P2=" << (env.tuzduks[1] + 1) << "\n";
 
   out << "P2:";
   for (int i = 8; i >= 0; --i) {
@@ -723,16 +682,14 @@ struct LimitTraceContext {
   string path = "limit.txt";
 };
 
-void initialize_limit_file(const string &path) {
+void initialize_limit_file(const string& path) {
   ofstream out(path, ios::trunc);
   out << "0\n";
 }
 
-void write_limit_trace_once(LimitTraceContext *ctx, const string &kind,
-                            int depth, size_t position_idx,
-                            const StartPosition &start,
-                            const vector<string> &history,
-                            const ToguzEnv &env) {
+void write_limit_trace_once(LimitTraceContext* ctx, const string& kind, int depth,
+                            size_t position_idx, const StartPosition& start,
+                            const vector<string>& history, const ToguzEnv& env) {
   if (ctx == nullptr) return;
 
   bool expected = false;
@@ -751,10 +708,9 @@ void write_limit_trace_once(LimitTraceContext *ctx, const string &kind,
   out << "max_steps=" << env.max_steps << "\n";
   out << "final_steps=" << env.steps << "\n";
   out << "final_winner=" << env.winner_code << "\n";
-  out << "final_kazans P1=" << env.kazans[0] << " P2=" << env.kazans[1]
-      << "\n";
+  out << "final_kazans P1=" << env.kazans[0] << " P2=" << env.kazans[1] << "\n";
   out << "\n";
-  for (const string &snapshot : history) {
+  for (const string& snapshot : history) {
     out << snapshot;
   }
 }
@@ -778,13 +734,11 @@ struct TimingStats {
   double seconds = 0.0;
 };
 
-TimingStats run_selfplay_timing_range(const vector<StartPosition> &starts,
-                                      const string &kind, int depth,
-                                      double move_time_seconds,
-                                      size_t begin_idx, size_t end_idx,
-                                      LimitTraceContext *limit_ctx,
-                                      DatasetWriter *dataset_writer,
-                                      const EvaluatorMap &evaluators) {
+TimingStats run_selfplay_timing_range(const vector<StartPosition>& starts, const string& kind,
+                                      int depth, double move_time_seconds, size_t begin_idx,
+                                      size_t end_idx, LimitTraceContext* limit_ctx,
+                                      DatasetWriter* dataset_writer,
+                                      const EvaluatorMap& evaluators) {
   TimingStats stats;
   stats.bot = kind;
   stats.depth = depth;
@@ -792,10 +746,9 @@ TimingStats run_selfplay_timing_range(const vector<StartPosition> &starts,
 
   ToguzEnv env;
   for (size_t idx = begin_idx; idx < end_idx; ++idx) {
-    if (limit_ctx != nullptr && limit_ctx->stop_requested.load())
-      break;
+    if (limit_ctx != nullptr && limit_ctx->stop_requested.load()) break;
 
-    const auto &start = starts[idx];
+    const auto& start = starts[idx];
     apply_start_position(env, start);
     int game_moves = 0;
     vector<string> history;
@@ -808,17 +761,14 @@ TimingStats run_selfplay_timing_range(const vector<StartPosition> &starts,
     }
 
     while (!env.is_game_over()) {
-      if (limit_ctx != nullptr && limit_ctx->stop_requested.load())
-        break;
+      if (limit_ctx != nullptr && limit_ctx->stop_requested.load()) break;
 
       int mover = env.to_play;
-      TimedBotResult timed = timed_bot_move(env, kind, move_time_seconds,
-                                            depth,
-                                            *evaluators[env.to_play]);
+      TimedBotResult timed =
+          timed_bot_move(env, kind, move_time_seconds, depth, *evaluators[env.to_play]);
       stats.nodes += timed.nodes;
       int move = timed.move;
-      if (move == -1)
-        break;
+      if (move == -1) break;
       env.step(move);
       game_moves++;
       history.push_back(board_snapshot(env, game_moves, mover, move));
@@ -827,8 +777,7 @@ TimingStats run_selfplay_timing_range(const vector<StartPosition> &starts,
       }
     }
 
-    if (limit_ctx != nullptr && limit_ctx->stop_requested.load() &&
-        !env.is_game_over()) {
+    if (limit_ctx != nullptr && limit_ctx->stop_requested.load() && !env.is_game_over()) {
       break;
     }
 
@@ -839,10 +788,8 @@ TimingStats run_selfplay_timing_range(const vector<StartPosition> &starts,
       stats.max_step_games++;
       write_limit_trace_once(limit_ctx, kind, depth, idx, start, history, env);
     }
-    if (stats.games == 1 || game_moves < stats.min_moves)
-      stats.min_moves = game_moves;
-    if (game_moves > stats.max_moves)
-      stats.max_moves = game_moves;
+    if (stats.games == 1 || game_moves < stats.min_moves) stats.min_moves = game_moves;
+    if (game_moves > stats.max_moves) stats.max_moves = game_moves;
 
     if (env.winner_code == PLAYER_1)
       stats.p1_wins++;
@@ -850,8 +797,7 @@ TimingStats run_selfplay_timing_range(const vector<StartPosition> &starts,
       stats.p2_wins++;
     else {
       stats.draws++;
-      if (env.current_repetition_count() >= 3)
-        stats.repetition_draws++;
+      if (env.current_repetition_count() >= 3) stats.repetition_draws++;
     }
 
     if (dataset_writer != nullptr && dataset_writer->enabled()) {
@@ -861,9 +807,8 @@ TimingStats run_selfplay_timing_range(const vector<StartPosition> &starts,
   return stats;
 }
 
-void merge_timing_stats(TimingStats &total, const TimingStats &part) {
-  if (total.move_time_seconds == 0.0)
-    total.move_time_seconds = part.move_time_seconds;
+void merge_timing_stats(TimingStats& total, const TimingStats& part) {
+  if (total.move_time_seconds == 0.0) total.move_time_seconds = part.move_time_seconds;
   total.games += part.games;
   total.p1_wins += part.p1_wins;
   total.p2_wins += part.p2_wins;
@@ -874,15 +819,12 @@ void merge_timing_stats(TimingStats &total, const TimingStats &part) {
   total.total_reduction += part.total_reduction;
   if (part.games > 0 && (total.min_moves == 0 || part.min_moves < total.min_moves))
     total.min_moves = part.min_moves;
-  if (part.max_moves > total.max_moves)
-    total.max_moves = part.max_moves;
+  if (part.max_moves > total.max_moves) total.max_moves = part.max_moves;
 }
 
-TimingStats run_selfplay_timing(const vector<StartPosition> &starts,
-                                const string &kind, int depth, int threads,
-                                double move_time_seconds,
-                                DatasetWriter *dataset_writer,
-                                const EvaluatorMap &evaluators) {
+TimingStats run_selfplay_timing(const vector<StartPosition>& starts, const string& kind, int depth,
+                                int threads, double move_time_seconds,
+                                DatasetWriter* dataset_writer, const EvaluatorMap& evaluators) {
   TimingStats stats;
   stats.bot = kind;
   stats.depth = depth;
@@ -896,8 +838,7 @@ TimingStats run_selfplay_timing(const vector<StartPosition> &starts,
     begin = chrono::high_resolution_clock::now();
     LimitTraceContext limit_ctx;
     initialize_limit_file(limit_ctx.path);
-    stats = run_selfplay_timing_range(starts, kind, depth, move_time_seconds,
-                                      0, starts.size(),
+    stats = run_selfplay_timing_range(starts, kind, depth, move_time_seconds, 0, starts.size(),
                                       &limit_ctx, dataset_writer, evaluators);
     end = chrono::high_resolution_clock::now();
     stats.threads = 1;
@@ -913,24 +854,19 @@ TimingStats run_selfplay_timing(const vector<StartPosition> &starts,
   initialize_limit_file(limit_ctx.path);
 
   begin = chrono::high_resolution_clock::now();
-  size_t chunk = (starts.size() + static_cast<size_t>(threads) - 1) /
-                 static_cast<size_t>(threads);
+  size_t chunk = (starts.size() + static_cast<size_t>(threads) - 1) / static_cast<size_t>(threads);
   for (int i = 0; i < threads; ++i) {
     size_t start = static_cast<size_t>(i) * chunk;
     size_t finish = min(starts.size(), start + chunk);
-    if (start >= finish)
-      break;
-    futures.push_back(async(launch::async, [&starts, kind, depth,
-                                             move_time_seconds, start, finish,
-                                             &limit_ctx, dataset_writer,
-                                             &evaluators]() {
-      return run_selfplay_timing_range(starts, kind, depth, move_time_seconds,
-                                       start, finish,
+    if (start >= finish) break;
+    futures.push_back(async(launch::async, [&starts, kind, depth, move_time_seconds, start, finish,
+                                            &limit_ctx, dataset_writer, &evaluators]() {
+      return run_selfplay_timing_range(starts, kind, depth, move_time_seconds, start, finish,
                                        &limit_ctx, dataset_writer, evaluators);
     }));
   }
 
-  for (auto &future : futures) {
+  for (auto& future : futures) {
     merge_timing_stats(stats, future.get());
   }
   end = chrono::high_resolution_clock::now();
@@ -938,41 +874,32 @@ TimingStats run_selfplay_timing(const vector<StartPosition> &starts,
   return stats;
 }
 
-void print_timing_stats(const TimingStats &stats) {
+void print_timing_stats(const TimingStats& stats) {
   double sec_per_game = stats.games == 0 ? 0.0 : stats.seconds / stats.games;
-  double ms_per_move =
-      stats.moves == 0 ? 0.0 : 1000.0 * stats.seconds / (double)stats.moves;
-  double avg_moves =
-      stats.games == 0 ? 0.0 : (double)stats.moves / (double)stats.games;
-  double avg_reduction = stats.games == 0
-                             ? 0.0
-                             : (double)stats.total_reduction / stats.games;
+  double ms_per_move = stats.moves == 0 ? 0.0 : 1000.0 * stats.seconds / (double)stats.moves;
+  double avg_moves = stats.games == 0 ? 0.0 : (double)stats.moves / (double)stats.games;
+  double avg_reduction = stats.games == 0 ? 0.0 : (double)stats.total_reduction / stats.games;
 
-  cout << "\n" << (stats.bot == "dag" ? "dag" : "minimax")
-       << " timed self-play"
+  cout << "\n"
+       << (stats.bot == "dag" ? "dag" : "minimax") << " timed self-play"
        << "\n";
-  cout << "time/half-move: " << fixed << setprecision(4)
-       << stats.move_time_seconds << "s  max depth: " << stats.depth << "\n";
-  cout << "games: " << stats.games << "  moves: " << stats.moves
-       << "  threads: " << stats.threads << "  wall time: " << fixed
-       << setprecision(3) << stats.seconds << "s\n";
-  cout << "sec/game: " << fixed << setprecision(4) << sec_per_game
-       << "  ms/move: " << fixed << setprecision(3) << ms_per_move
-       << "  avg moves/game: " << fixed << setprecision(1) << avg_moves
-       << "\n";
+  cout << "time/half-move: " << fixed << setprecision(4) << stats.move_time_seconds
+       << "s  max depth: " << stats.depth << "\n";
+  cout << "games: " << stats.games << "  moves: " << stats.moves << "  threads: " << stats.threads
+       << "  wall time: " << fixed << setprecision(3) << stats.seconds << "s\n";
+  cout << "sec/game: " << fixed << setprecision(4) << sec_per_game << "  ms/move: " << fixed
+       << setprecision(3) << ms_per_move << "  avg moves/game: " << fixed << setprecision(1)
+       << avg_moves << "\n";
   double nps = stats.seconds > 0.0 ? (double)stats.nodes / stats.seconds : 0.0;
-  cout << "nodes: " << stats.nodes << "  nps: " << fixed << setprecision(0)
-       << nps << "\n";
+  cout << "nodes: " << stats.nodes << "  nps: " << fixed << setprecision(0) << nps << "\n";
   cout << "P1 wins: " << stats.p1_wins << "  P2 wins: " << stats.p2_wins
-       << "  draws: " << stats.draws
-       << "  repetition draws: " << stats.repetition_draws
+       << "  draws: " << stats.draws << "  repetition draws: " << stats.repetition_draws
        << "  max-step games: " << stats.max_step_games << "\n";
   cout << "move range: " << stats.min_moves << ".." << stats.max_moves
-       << "  avg equal reduction per side: " << fixed << setprecision(1)
-       << avg_reduction << "\n";
+       << "  avg equal reduction per side: " << fixed << setprecision(1) << avg_reduction << "\n";
 }
 
-void run_selfplay_benchmark(const Args &args) {
+void run_selfplay_benchmark(const Args& args) {
   if (args.positions < 1) {
     throw runtime_error("--positions must be >= 1 for timing.");
   }
@@ -989,23 +916,21 @@ void run_selfplay_benchmark(const Args &args) {
   } else if (args.benchmark_bot == "ai" || args.benchmark_bot == "minimax") {
     bots = {"ai"};
   } else {
-      throw runtime_error("--bot must be one of: both, dag, ai, minimax.");
+    throw runtime_error("--bot must be one of: both, dag, ai, minimax.");
   }
 
   int threads = args.threads;
   if (threads <= 0) {
     threads = static_cast<int>(thread::hardware_concurrency());
-    if (threads <= 0)
-      threads = 1;
+    if (threads <= 0) threads = 1;
   }
   threads = max(1, threads);
 
   cout << "=== Self-play timing benchmark ===\n";
-  cout << "Time/half-move: " << fixed << setprecision(4)
-       << args.move_time_seconds << "s  Max search depth: "
-       << args.max_search_depth << "\n";
-  cout << "Positions/Games: " << args.positions
-       << " balanced reduced starts, seed=" << args.seed << "\n";
+  cout << "Time/half-move: " << fixed << setprecision(4) << args.move_time_seconds
+       << "s  Max search depth: " << args.max_search_depth << "\n";
+  cout << "Positions/Games: " << args.positions << " balanced reduced starts, seed=" << args.seed
+       << "\n";
   cout << "Max steps per game: " << args.max_steps << "\n";
   cout << "Threads: " << threads << " (use --threads 1 for single-core timing, "
        << "--threads 0 for auto)\n";
@@ -1019,15 +944,12 @@ void run_selfplay_benchmark(const Args &args) {
        << " per selected pit with equal total removed per side.\n";
 
   DatasetWriter dataset_writer(args.dataset_file);
-  DatasetWriter *dataset_writer_ptr =
-      dataset_writer.enabled() ? &dataset_writer : nullptr;
+  DatasetWriter* dataset_writer_ptr = dataset_writer.enabled() ? &dataset_writer : nullptr;
 
   auto starts = make_balanced_start_positions(args);
-  for (const string &bot : bots) {
-    TimingStats stats =
-        run_selfplay_timing(starts, bot, args.max_search_depth, threads,
-                            args.move_time_seconds,
-                            dataset_writer_ptr, evaluators);
+  for (const string& bot : bots) {
+    TimingStats stats = run_selfplay_timing(starts, bot, args.max_search_depth, threads,
+                                            args.move_time_seconds, dataset_writer_ptr, evaluators);
     print_timing_stats(stats);
     if (stats.max_step_games > 0) {
       cout << "Limit trace written to limit.txt. Stopping benchmark early.\n";
@@ -1042,10 +964,8 @@ struct WorkerResult {
 };
 
 WorkerResult play_game_worker(string mode, string position, bool p1_is_black,
-                              DatasetWriter *dataset_writer,
-                              EvaluatorMap evaluators,
-                              double move_time_seconds,
-                              int max_search_depth) {
+                              DatasetWriter* dataset_writer, EvaluatorMap evaluators,
+                              double move_time_seconds, int max_search_depth) {
   ToguzEnv env;
   auto controllers = build_controllers(mode, p1_is_black);
   prepare_start_position(env, position);
@@ -1061,12 +981,10 @@ WorkerResult play_game_worker(string mode, string position, bool p1_is_black,
     PlayerConfig pc = controllers.at(player_id);
     if (pc.kind != "randombot" && pc.kind != "ai" && pc.kind != "dag")
       throw runtime_error("Unsupported mode for worker: " + pc.kind);
-    TimedBotResult timed = timed_bot_move(env, pc.kind, move_time_seconds,
-                                          max_search_depth,
-                                          *evaluators[player_id]);
+    TimedBotResult timed =
+        timed_bot_move(env, pc.kind, move_time_seconds, max_search_depth, *evaluators[player_id]);
     int move = timed.move;
-    if (move == -1)
-      throw runtime_error(pc.kind + " has no legal move.");
+    if (move == -1) throw runtime_error(pc.kind + " has no legal move.");
     env.step(move);
     if (dataset_writer != nullptr && dataset_writer->enabled()) {
       training_examples.push_back(capture_training_example(env));
@@ -1083,8 +1001,7 @@ WorkerResult play_game_worker(string mode, string position, bool p1_is_black,
   return res;
 }
 
-void run_uci_mode(const EvaluatorMap &evaluators, double default_move_time,
-                  int default_max_depth) {
+void run_uci_mode(const EvaluatorMap& evaluators, double default_move_time, int default_max_depth) {
   ToguzEnv env;
   string line;
   bool newgame_received = false;
@@ -1134,8 +1051,8 @@ void run_uci_mode(const EvaluatorMap &evaluators, double default_move_time,
           move_time = movetime_ms / 1000.0;
         }
       }
-      auto result = minimax_engine::get_best_move_timed(
-          env, move_time, max_depth, *evaluators[env.to_play]);
+      auto result =
+          minimax_engine::get_best_move_timed(env, move_time, max_depth, *evaluators[env.to_play]);
       cout << "bestmove " << (result.move + 1) << endl;
     } else if (line == "render") {
       env.render("terminal");
@@ -1158,7 +1075,7 @@ void run_uci_mode(const EvaluatorMap &evaluators, double default_move_time,
   }
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   Zobrist::init();
   Args args = parse_args(argc, argv);
 
@@ -1205,37 +1122,32 @@ int main(int argc, char *argv[]) {
   if (!args.noterminal) {
     cout << "Evaluators: P1=" << evaluators[PLAYER_1]->description()
          << "  P2=" << evaluators[PLAYER_2]->description() << "\n";
-    cout << "Time control: " << fixed << setprecision(4)
-         << args.move_time_seconds << "s per half-move"
+    cout << "Time control: " << fixed << setprecision(4) << args.move_time_seconds
+         << "s per half-move"
          << "  max search depth: " << args.max_search_depth << "\n";
   }
 
   DatasetWriter dataset_writer(args.dataset_file);
-  DatasetWriter *dataset_writer_ptr =
-      dataset_writer.enabled() ? &dataset_writer : nullptr;
+  DatasetWriter* dataset_writer_ptr = dataset_writer.enabled() ? &dataset_writer : nullptr;
 
   if (dataset_writer_ptr != nullptr && !args.noterminal) {
-    cout << "Dataset output: " << dataset_writer.output_path()
-         << " (JSONL append)\n";
+    cout << "Dataset output: " << dataset_writer.output_path() << " (JSONL append)\n";
   }
 
   bool use_parallel =
-      (args.noterminal && args.mode.find("human") == string::npos &&
-       args.numgames > 1);
+      (args.noterminal && args.mode.find("human") == string::npos && args.numgames > 1);
 
   if (use_parallel) {
     vector<future<WorkerResult>> futures;
     int max_cores = thread::hardware_concurrency();
-    if (max_cores == 0)
-      max_cores = 1;
+    if (max_cores == 0) max_cores = 1;
     int launched = 0;
 
     while (launched < args.numgames || !futures.empty()) {
       while (futures.size() < (size_t)max_cores && launched < args.numgames) {
         bool p1_black = (!args.switch_color) || ((launched) % 2 == 0);
-        futures.push_back(async(launch::async, play_game_worker, args.mode,
-                                args.position, p1_black, dataset_writer_ptr,
-                                evaluators, args.move_time_seconds,
+        futures.push_back(async(launch::async, play_game_worker, args.mode, args.position, p1_black,
+                                dataset_writer_ptr, evaluators, args.move_time_seconds,
                                 args.max_search_depth));
         launched++;
       }
@@ -1269,8 +1181,7 @@ int main(int argc, char *argv[]) {
         cout << "=== Game " << game_idx << "/" << args.numgames << " ===\n";
         cout << "Starting mode: " << args.mode << "\n";
         if (args.position == "random") {
-          cout << "Start position: random (" << random_plies
-               << " random plies from initial).\n";
+          cout << "Start position: random (" << random_plies << " random plies from initial).\n";
         } else if (args.position == "balanced" || args.position == "reduced") {
           cout << "Start position: balanced reduced (" << random_plies
                << " stones removed from each side).\n";
@@ -1281,12 +1192,9 @@ int main(int argc, char *argv[]) {
       }
 
       bool finished =
-          play_single_terminal_game(env, controllers, evaluators,
-                                    args.move_time_seconds,
-                                    args.max_search_depth, args.noterminal,
-                                    dataset_writer_ptr);
-      if (!finished)
-        return 0;
+          play_single_terminal_game(env, controllers, evaluators, args.move_time_seconds,
+                                    args.max_search_depth, args.noterminal, dataset_writer_ptr);
+      if (!finished) return 0;
 
       string winner = logical_winner(env, p1_is_black);
       update_stats(stats, p1_is_black, winner);

@@ -68,7 +68,7 @@ State initial_state() {
   return state;
 }
 
-int collect_legal_moves(const State &state, std::array<int, kPits> &moves) {
+int collect_legal_moves(const State& state, std::array<int, kPits>& moves) {
   int count = 0;
   const int blocked = state.tuzdyks[1 - state.to_play];
   const int base = state.to_play * kPits;
@@ -82,12 +82,12 @@ int collect_legal_moves(const State &state, std::array<int, kPits> &moves) {
   return count;
 }
 
-bool has_legal_move(const State &state) {
+bool has_legal_move(const State& state) {
   std::array<int, kPits> moves{};
   return collect_legal_moves(state, moves) > 0;
 }
 
-void determine_winner(State &state) {
+void determine_winner(State& state) {
   if (state.kazans[0] > state.kazans[1]) {
     state.winner = 0;
   } else if (state.kazans[1] > state.kazans[0]) {
@@ -97,7 +97,7 @@ void determine_winner(State &state) {
   }
 }
 
-MoveResult play_move(const State &before, int action) {
+MoveResult play_move(const State& before, int action) {
   State state = before;
   const int player = state.to_play;
   const int opponent = 1 - player;
@@ -122,7 +122,7 @@ MoveResult play_move(const State &before, int action) {
     last = (start + sow_count) % kTotalPits;
 
     if (cycles > 0) {
-      for (uint8_t &pit : state.board) {
+      for (uint8_t& pit : state.board) {
         pit = static_cast<uint8_t>(pit + cycles);
       }
     }
@@ -188,7 +188,7 @@ MoveResult play_move(const State &before, int action) {
   return result;
 }
 
-int best_immediate_gain_for(const State &state, int player) {
+int best_immediate_gain_for(const State& state, int player) {
   if (state.winner != kOngoing || state.to_play != player) {
     return 0;
   }
@@ -198,13 +198,13 @@ int best_immediate_gain_for(const State &state, int player) {
   int best = 0;
   for (int index = 0; index < count; ++index) {
     const State next = play_move(state, moves[index]).state;
-    best = std::max(best, static_cast<int>(next.kazans[player]) -
-                              static_cast<int>(state.kazans[player]));
+    best = std::max(best,
+                    static_cast<int>(next.kazans[player]) - static_cast<int>(state.kazans[player]));
   }
   return best;
 }
 
-bool state_less(const State &left, const State &right) {
+bool state_less(const State& left, const State& right) {
   if (left.board != right.board) {
     return left.board < right.board;
   }
@@ -217,12 +217,12 @@ bool state_less(const State &left, const State &right) {
   return left.to_play < right.to_play;
 }
 
-bool state_equal(const State &left, const State &right) {
+bool state_equal(const State& left, const State& right) {
   return left.board == right.board && left.kazans == right.kazans &&
          left.tuzdyks == right.tuzdyks && left.to_play == right.to_play;
 }
 
-int side_stones(const State &state, int player) {
+int side_stones(const State& state, int player) {
   int total = 0;
   const int base = player * kPits;
   for (int pit = 0; pit < kPits; ++pit) {
@@ -231,7 +231,7 @@ int side_stones(const State &state, int player) {
   return total;
 }
 
-int tuzdyk_state_index(const State &state) {
+int tuzdyk_state_index(const State& state) {
   const bool p1_has = state.tuzdyks[0] != -1;
   const bool p2_has = state.tuzdyks[1] != -1;
   if (!p1_has && !p2_has) {
@@ -246,8 +246,8 @@ int tuzdyk_state_index(const State &state) {
   return 3;
 }
 
-void add_child_stats(DepthStats &stats, const MoveResult &result) {
-  const State &child = result.state;
+void add_child_stats(DepthStats& stats, const MoveResult& result) {
+  const State& child = result.state;
   if (child.winner == kOngoing) {
     stats.nonterminal_edges++;
   } else {
@@ -261,10 +261,8 @@ void add_child_stats(DepthStats &stats, const MoveResult &result) {
     }
   }
 
-  stats.max_p1_kazan_after =
-      std::max(stats.max_p1_kazan_after, static_cast<int>(child.kazans[0]));
-  stats.max_p2_kazan_after =
-      std::max(stats.max_p2_kazan_after, static_cast<int>(child.kazans[1]));
+  stats.max_p1_kazan_after = std::max(stats.max_p1_kazan_after, static_cast<int>(child.kazans[0]));
+  stats.max_p2_kazan_after = std::max(stats.max_p2_kazan_after, static_cast<int>(child.kazans[1]));
   stats.max_mover_gain = std::max(stats.max_mover_gain, result.mover_gain);
 
   const int p1_side = side_stones(child, 0);
@@ -276,8 +274,8 @@ void add_child_stats(DepthStats &stats, const MoveResult &result) {
   stats.tuzdyk_state_counts[tuzdyk_state_index(child)]++;
 }
 
-void write_depth_stats(const std::vector<DepthStats> &stats,
-                       const std::string &path, int terminal_depth) {
+void write_depth_stats(const std::vector<DepthStats>& stats, const std::string& path,
+                       int terminal_depth) {
   std::ofstream out(path);
   if (!out) {
     throw std::runtime_error("failed to open " + path);
@@ -303,19 +301,17 @@ void write_depth_stats(const std::vector<DepthStats> &stats,
   out << "\telapsed_seconds\n";
 
   out << std::fixed << std::setprecision(6);
-  for (const DepthStats &row : stats) {
+  for (const DepthStats& row : stats) {
     const double avg_legal =
         row.frontier_positions == 0
             ? 0.0
-            : static_cast<double>(row.legal_edges) /
-                  static_cast<double>(row.frontier_positions);
+            : static_cast<double>(row.legal_edges) / static_cast<double>(row.frontier_positions);
 
-    out << row.halfmove << "\t" << row.frontier_positions << "\t"
-        << row.legal_edges << "\t" << avg_legal << "\t"
-        << (row.frontier_positions == 0 ? 0 : row.min_legal_moves) << "\t"
-        << row.max_legal_moves << "\t" << row.nonterminal_edges << "\t"
-        << row.terminal_edges << "\t" << row.p1_terminal_edges << "\t"
-        << row.p2_terminal_edges << "\t" << row.draw_terminal_edges << "\t";
+    out << row.halfmove << "\t" << row.frontier_positions << "\t" << row.legal_edges << "\t"
+        << avg_legal << "\t" << (row.frontier_positions == 0 ? 0 : row.min_legal_moves) << "\t"
+        << row.max_legal_moves << "\t" << row.nonterminal_edges << "\t" << row.terminal_edges
+        << "\t" << row.p1_terminal_edges << "\t" << row.p2_terminal_edges << "\t"
+        << row.draw_terminal_edges << "\t";
 
     if (row.unique_after_available) {
       out << row.unique_nonterminal_after;
@@ -323,10 +319,9 @@ void write_depth_stats(const std::vector<DepthStats> &stats,
       out << "not_materialized";
     }
 
-    out << "\t" << row.max_p1_kazan_after << "\t"
-        << row.max_p2_kazan_after << "\t" << row.max_mover_gain << "\t"
-        << row.min_p1_side_after << "\t" << row.max_p1_side_after << "\t"
-        << row.min_p2_side_after << "\t" << row.max_p2_side_after;
+    out << "\t" << row.max_p1_kazan_after << "\t" << row.max_p2_kazan_after << "\t"
+        << row.max_mover_gain << "\t" << row.min_p1_side_after << "\t" << row.max_p1_side_after
+        << "\t" << row.min_p2_side_after << "\t" << row.max_p2_side_after;
 
     for (uint64_t count : row.tuzdyk_state_counts) {
       out << "\t" << count;
@@ -337,8 +332,7 @@ void write_depth_stats(const std::vector<DepthStats> &stats,
     out << "\t" << row.elapsed_seconds << "\n";
   }
 
-  out << "# proven_terminal_edges_zero_through_halfmove\t"
-      << (terminal_depth - 1) << "\n";
+  out << "# proven_terminal_edges_zero_through_halfmove\t" << (terminal_depth - 1) << "\n";
   out << "# saved_shortest_candidate_halfmove\t" << terminal_depth << "\n";
   out << "# see\tshortest_terminal_game.txt\tshortest_candidate_replay.tsv\n";
 }
@@ -363,7 +357,7 @@ bool prove_no_terminal_before(int terminal_depth) {
       next.reserve(frontier.size() * kPits);
     }
 
-    for (const State &state : frontier) {
+    for (const State& state : frontier) {
       std::array<int, kPits> moves{};
       const int count = collect_legal_moves(state, moves);
       row.legal_edges += static_cast<uint64_t>(count);
@@ -381,8 +375,7 @@ bool prove_no_terminal_before(int terminal_depth) {
     }
 
     std::cerr << "depth " << depth << ": frontier=" << frontier.size()
-              << " edges=" << row.legal_edges
-              << " terminals=" << row.terminal_edges;
+              << " edges=" << row.legal_edges << " terminals=" << row.terminal_edges;
 
     if (row.terminal_edges > 0) {
       std::cerr << "\n";
@@ -391,8 +384,7 @@ bool prove_no_terminal_before(int terminal_depth) {
 
     if (need_next_frontier) {
       std::sort(next.begin(), next.end(), state_less);
-      next.erase(std::unique(next.begin(), next.end(), state_equal),
-                 next.end());
+      next.erase(std::unique(next.begin(), next.end(), state_equal), next.end());
       row.unique_nonterminal_after = next.size();
       row.unique_after_available = true;
       std::cerr << " next=" << next.size();
@@ -402,8 +394,7 @@ bool prove_no_terminal_before(int terminal_depth) {
     const auto now = std::chrono::steady_clock::now();
     row.elapsed_seconds = std::chrono::duration<double>(now - started).count();
     rows.push_back(row);
-    std::cerr << " elapsed="
-              << row.elapsed_seconds << "s\n";
+    std::cerr << " elapsed=" << row.elapsed_seconds << "s\n";
   }
 
   write_depth_stats(rows, "shortest_depth_proof.tsv", terminal_depth);
@@ -422,7 +413,7 @@ std::vector<std::string> beam_find_terminal(int max_depth, int beam_width) {
   for (int depth = 1; depth <= max_depth; ++depth) {
     std::vector<BeamNode> candidates;
 
-    for (const BeamNode &node : beam) {
+    for (const BeamNode& node : beam) {
       if (node.state.winner != kOngoing) {
         continue;
       }
@@ -441,29 +432,25 @@ std::vector<std::string> beam_find_terminal(int max_depth, int beam_width) {
         const int target = 0;
         const int opponent = 1;
         const int target_gain = result.state.kazans[target] - node.state.kazans[target];
-        const int opponent_gain =
-            result.state.kazans[opponent] - node.state.kazans[opponent];
+        const int opponent_gain = result.state.kazans[opponent] - node.state.kazans[opponent];
         const int target_next_gain = best_immediate_gain_for(result.state, target);
-        const int side0 = std::accumulate(result.state.board.begin(),
-                                          result.state.board.begin() + kPits, 0);
-        const int side1 = std::accumulate(result.state.board.begin() + kPits,
-                                          result.state.board.end(), 0);
+        const int side0 =
+            std::accumulate(result.state.board.begin(), result.state.board.begin() + kPits, 0);
+        const int side1 =
+            std::accumulate(result.state.board.begin() + kPits, result.state.board.end(), 0);
 
         BeamNode child;
         child.state = result.state;
         child.line = std::move(line);
-        child.score = result.state.kazans[target] * 10000 -
-                      result.state.kazans[opponent] * 1000 +
-                      target_next_gain * 750 + target_gain * 100 -
-                      opponent_gain * 100 - std::abs(side0 - side1);
+        child.score = result.state.kazans[target] * 10000 - result.state.kazans[opponent] * 1000 +
+                      target_next_gain * 750 + target_gain * 100 - opponent_gain * 100 -
+                      std::abs(side0 - side1);
         candidates.push_back(std::move(child));
       }
     }
 
     std::sort(candidates.begin(), candidates.end(),
-              [](const BeamNode &left, const BeamNode &right) {
-                return left.score > right.score;
-              });
+              [](const BeamNode& left, const BeamNode& right) { return left.score > right.score; });
 
     if (static_cast<int>(candidates.size()) > beam_width) {
       candidates.resize(beam_width);
@@ -474,8 +461,7 @@ std::vector<std::string> beam_find_terminal(int max_depth, int beam_width) {
   return {};
 }
 
-State replay_line(const std::vector<int> &actions,
-                  std::vector<std::string> &notation) {
+State replay_line(const std::vector<int>& actions, std::vector<std::string>& notation) {
   State state = initial_state();
   notation.clear();
 
@@ -486,8 +472,7 @@ State replay_line(const std::vector<int> &actions,
 
     std::array<int, kPits> moves{};
     const int count = collect_legal_moves(state, moves);
-    if (std::find(moves.begin(), moves.begin() + count, action) ==
-        moves.begin() + count) {
+    if (std::find(moves.begin(), moves.begin() + count, action) == moves.begin() + count) {
       throw std::runtime_error("illegal action in candidate line");
     }
 
@@ -499,8 +484,7 @@ State replay_line(const std::vector<int> &actions,
   return state;
 }
 
-void write_game(const std::vector<std::string> &line,
-                const std::string &path) {
+void write_game(const std::vector<std::string>& line, const std::string& path) {
   std::ofstream out(path);
   if (!out) {
     throw std::runtime_error("failed to open " + path);
@@ -515,8 +499,7 @@ void write_game(const std::vector<std::string> &line,
   }
 }
 
-void write_candidate_stats(const std::vector<int> &actions,
-                           const std::string &path) {
+void write_candidate_stats(const std::vector<int>& actions, const std::string& path) {
   std::ofstream out(path);
   if (!out) {
     throw std::runtime_error("failed to open " + path);
@@ -533,12 +516,10 @@ void write_candidate_stats(const std::vector<int> &actions,
     MoveResult result = play_move(state, actions[index]);
     state = result.state;
 
-    out << (index + 1) << "\tP" << (player + 1) << "\t"
-        << result.notation << "\t" << static_cast<int>(state.kazans[0])
-        << "\t" << static_cast<int>(state.kazans[1]) << "\t"
+    out << (index + 1) << "\tP" << (player + 1) << "\t" << result.notation << "\t"
+        << static_cast<int>(state.kazans[0]) << "\t" << static_cast<int>(state.kazans[1]) << "\t"
         << side_stones(state, 0) << "\t" << side_stones(state, 1) << "\t"
-        << static_cast<int>(state.tuzdyks[0]) << "\t"
-        << static_cast<int>(state.tuzdyks[1]) << "\t";
+        << static_cast<int>(state.tuzdyks[0]) << "\t" << static_cast<int>(state.tuzdyks[1]) << "\t";
 
     if (state.winner == kOngoing) {
       out << "ongoing";
@@ -551,7 +532,7 @@ void write_candidate_stats(const std::vector<int> &actions,
   }
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   int max_depth = 11;
   int beam_width = 1000;
   bool prove = true;
@@ -579,11 +560,10 @@ int main(int argc, char **argv) {
   }
 
   if (!verify_only) {
-    const std::vector<std::string> discovered =
-        beam_find_terminal(max_depth, beam_width);
+    const std::vector<std::string> discovered = beam_find_terminal(max_depth, beam_width);
     if (discovered.empty()) {
-      std::cerr << "beam search did not find a terminal line within "
-                << max_depth << " halfmoves; verifying saved candidate\n";
+      std::cerr << "beam search did not find a terminal line within " << max_depth
+                << " halfmoves; verifying saved candidate\n";
     }
 
     if (prove) {
@@ -598,8 +578,7 @@ int main(int argc, char **argv) {
 
   std::cout << "Saved shortest candidate with " << notation.size()
             << " halfmoves to shortest_terminal_game.txt\n";
-  std::cout << "Final kazans: " << static_cast<int>(final_state.kazans[0])
-            << "-" << static_cast<int>(final_state.kazans[1]) << "\n";
-  std::cout << "Winner: P" << (static_cast<int>(final_state.winner) + 1)
-            << "\n";
+  std::cout << "Final kazans: " << static_cast<int>(final_state.kazans[0]) << "-"
+            << static_cast<int>(final_state.kazans[1]) << "\n";
+  std::cout << "Winner: P" << (static_cast<int>(final_state.winner) + 1) << "\n";
 }
