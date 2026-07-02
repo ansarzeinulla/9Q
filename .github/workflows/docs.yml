@@ -31,8 +31,9 @@ jobs:
         sudo apt-get install -y doxygen graphviz
 
     - name: Generate Documentation
-      # We let your local Doxyfile do its job without any fragile overrides!
+      # We create the directory first so Doxygen 1.9.8 doesn't crash on the clean runner
       run: |
+        mkdir -p build/docs
         doxygen Doxyfile
 
     - name: Setup Pages
@@ -43,7 +44,7 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        path: 'build/docs/html' # Point back to the exact path Doxygen is writing to
+        path: 'build/docs/html'
 
   deploy-docs:
     environment:
@@ -54,4 +55,4 @@ jobs:
     steps:
     - name: Deploy to GitHub Pages
       id: deployment
-      uses: actions/deploy-pages@v4 # Removed continue-on-error so we can see real errors
+      uses: actions/deploy-pages@v4
