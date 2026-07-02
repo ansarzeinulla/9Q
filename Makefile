@@ -16,4 +16,7 @@ wasm:
 
 clean:
 	rm -rf build/
-	rm -rf web/public/wasm/*
+
+# NOTE: web/public/wasm/ contains committed WASM artifacts required by Vercel.
+# Regenerate them intentionally with: npm run build:wasm
+
