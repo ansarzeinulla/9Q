@@ -15,10 +15,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy-docs:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build-docs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Source
@@ -40,12 +37,22 @@ jobs:
 
     - name: Setup Pages
       uses: actions/configure-pages@v5
+      with:
+        enablement: true
 
     - name: Upload Artifact
       uses: actions/upload-pages-artifact@v3
       with:
         path: 'build/docs/html'
 
+  deploy-docs:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build-docs
+    steps:
     - name: Deploy to GitHub Pages
       id: deployment
       uses: actions/deploy-pages@v4
+

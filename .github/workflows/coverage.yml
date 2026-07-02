@@ -31,10 +31,14 @@ jobs:
 
     - name: Capture Coverage Info
       run: |
-        # Capture raw coverage files
-        lcov --directory build --capture --output-file raw_coverage.info
-        # Filter out system and third-party files (like googletest headers)
-        lcov --remove raw_coverage.info '/usr/*' '*/_deps/*' '*/tests/*' --output-file coverage.info
+        # Capture raw coverage files (--ignore-errors mismatch suppresses
+        # benign geninfo line-number mismatches caused by compiler inlining)
+        lcov --directory build --capture \
+             --ignore-errors mismatch,mismatch \
+             --output-file raw_coverage.info
+        # Filter out system and third-party files
+        lcov --remove raw_coverage.info '/usr/*' '*/_deps/*' '*/tests/*' \
+             --output-file coverage.info
         # Print summary
         lcov --list coverage.info
 

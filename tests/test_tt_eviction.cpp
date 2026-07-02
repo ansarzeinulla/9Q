@@ -1,77 +1,72 @@
 #include "togyz/dag_search.hpp"
+
 #include <gtest/gtest.h>
 
 TEST(TTEvictionTest, BasicStoreAndProbe) {
-    dag_search::TranspositionTable tt(4); // 4 MB table
-    uint64_t hash = 0x123456789ABCDEFULL;
-    int16_t eval = 42;
-    uint8_t depth = 5;
-    uint8_t flag = 1;
-    uint16_t best_move = 3;
+  dag_search::TranspositionTable tt(4);  // 4 MB table
+  uint64_t hash = 0x123456789ABCDEFULL;
+  int16_t eval = 42;
+  uint8_t depth = 5;
+  uint8_t flag = 1;
+  uint16_t best_move = 3;
 
-    tt.store(hash, eval, depth, flag, best_move);
+  tt.store(hash, eval, depth, flag, best_move);
 
-    dag_search::TTEntry entry;
-    bool found = tt.probe(hash, entry);
+  dag_search::TTEntry entry;
+  bool found = tt.probe(hash, entry);
 
-    EXPECT_TRUE(found);
-    EXPECT_EQ(entry.lock, hash);
-    EXPECT_EQ(entry.eval, eval);
-    EXPECT_EQ(entry.depth, depth);
-    EXPECT_EQ(entry.flag, flag);
-    EXPECT_EQ(entry.best_move, best_move);
+  EXPECT_TRUE(found);
+  EXPECT_EQ(entry.lock, hash);
+  EXPECT_EQ(entry.eval, eval);
+  EXPECT_EQ(entry.depth, depth);
+  EXPECT_EQ(entry.flag, flag);
+  EXPECT_EQ(entry.best_move, best_move);
 }
 
 TEST(TTEvictionTest, DepthPreferredEviction) {
-    dag_search::TranspositionTable tt(4); // 4 MB table
+  dag_search::TranspositionTable tt(4);  // 4 MB table
 
-    // We choose two hashes that map to the same index (e.g. they share the same lower bits)
-    // To ensure they map to the same index, we can use the table's mask if we want, or just the exact same hash
-    // (a collision on the exact same hash represents rewriting the same node, which is a common scenario).
-    // Let's also verify collisions with different locks.
-    size_t table_size = tt.entries();
-    uint64_t hash1 = 100;
-    uint64_t hash2 = 100 + table_size; // guaranteed to collide since (hash1 & mask) == (hash2 & mask)
+  // Two hashes that collide at the same table index:
+  // hash2 = hash1 + table_size  =>  (hash1 & mask) == (hash2 & mask)
+  size_t table_size = tt.entries();
+  uint64_t hash1 = 100;
+  uint64_t hash2 = 100 + table_size;
 
-    // Store deeper search first
-    tt.store(hash1, 100, 10, 1, 2);
+  // Store deeper search first.
+  tt.store(hash1, 100, 10, 1, 2);
 
-    // Try to overwrite with shallower search
-    tt.store(hash2, 50, 5, 1, 3);
+  // Try to overwrite with a shallower search (depth 5 < 10 => should NOT replace).
+  tt.store(hash2, 50, 5, 1, 3);
 
-    dag_search::TTEntry entry;
-    // The deeper entry at hash1 should still be present because hash2 had lower depth (5 < 10)
-    // Wait, the store logic checks:
-    // if (slot.lock == 0 || depth >= slot.depth)
-    // For hash2, depth (5) is less than slot.depth (10), so it should NOT overwrite.
-    bool found1 = tt.probe(hash1, entry);
-    EXPECT_TRUE(found1);
-    EXPECT_EQ(entry.eval, 100);
-    EXPECT_EQ(entry.depth, 10);
+  dag_search::TTEntry entry;
+  bool found1 = tt.probe(hash1, entry);
+  EXPECT_TRUE(found1);
+  EXPECT_EQ(entry.eval, 100);
+  EXPECT_EQ(entry.depth, 10);
 
-    // Overwrite with equal depth
-    tt.store(hash2, 60, 10, 1, 4);
-    bool found2 = tt.probe(hash2, entry);
-    EXPECT_TRUE(found2);
-    EXPECT_EQ(entry.eval, 60);
-    EXPECT_EQ(entry.depth, 10);
+  // Overwrite with equal depth (depth 10 >= 10 => should replace).
+  tt.store(hash2, 60, 10, 1, 4);
+  bool found2 = tt.probe(hash2, entry);
+  EXPECT_TRUE(found2);
+  EXPECT_EQ(entry.eval, 60);
+  EXPECT_EQ(entry.depth, 10);
 
-    // Overwrite with higher depth
-    tt.store(hash1, 200, 15, 1, 5);
-    found1 = tt.probe(hash1, entry);
-    EXPECT_TRUE(found1);
-    EXPECT_EQ(entry.eval, 200);
-    EXPECT_EQ(entry.depth, 15);
+  // Overwrite with higher depth (15 >= 10 => should replace).
+  tt.store(hash1, 200, 15, 1, 5);
+  found1 = tt.probe(hash1, entry);
+  EXPECT_TRUE(found1);
+  EXPECT_EQ(entry.eval, 200);
+  EXPECT_EQ(entry.depth, 15);
 }
 
 TEST(TTEvictionTest, TableClear) {
-    dag_search::TranspositionTable tt(4);
-    uint64_t hash = 999;
-    tt.store(hash, 10, 5, 0, 1);
+  dag_search::TranspositionTable tt(4);
+  uint64_t hash = 999;
+  tt.store(hash, 10, 5, 0, 1);
 
-    dag_search::TTEntry entry;
-    EXPECT_TRUE(tt.probe(hash, entry));
+  dag_search::TTEntry entry;
+  EXPECT_TRUE(tt.probe(hash, entry));
 
-    tt.clear();
-    EXPECT_FALSE(tt.probe(hash, entry));
+  tt.clear();
+  EXPECT_FALSE(tt.probe(hash, entry));
 }
