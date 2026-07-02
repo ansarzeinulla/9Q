@@ -1,20 +1,18 @@
 # Togyzkumalak-Wasm: High-Performance Combinatorial State-Space Simulator
 
-*Read this in other languages:*
-🇺🇸 [English](README.md) | 🇰🇿 [Қазақша](docs/locales/README_kk.md) | 🇷🇺 [Русский](docs/locales/README_ru.md) | 🇰🇬 [Кыргызча](docs/locales/README_ky.md)
+*Read this in other languages: [English](https://github.com/ansarzeinulla/9Q/blob/main/README.md) | [Қазақша](https://github.com/ansarzeinulla/9Q/blob/main/docs/locales/README_kk.md) | [Русский](https://github.com/ansarzeinulla/9Q/blob/main/docs/locales/README_ru.md) | [Кыргызча](https://github.com/ansarzeinulla/9Q/blob/main/docs/locales/README_ky.md)*
 
 [![CI/CD Pipeline](https://github.com/ansarzeinulla/9Q/actions/workflows/build.yml/badge.svg)](https://github.com/ansarzeinulla/9Q/actions)
-[![codecov](https://codecov.io/gh/ansarzeinulla/9Q/graph/badge.svg)](https://codecov.io/gh/ansarzeinulla/9Q)
 [![CodeQL](https://github.com/ansarzeinulla/9Q/actions/workflows/codeql.yml/badge.svg)](https://github.com/ansarzeinulla/9Q/security/code-scanning)
-[![Docs](https://img.shields.io/badge/Docs-Doxygen_Awesome-blue)](https://ansarzeinulla.github.io/9Q/)
-[![WASM Demo](https://img.shields.io/badge/Play_Live-WebAssembly-blueviolet)](https://9qumalaq.vercel.app/)
+[![Codecov](https://codecov.io/gh/ansarzeinulla/9Q/graph/badge.svg)](https://codecov.io/gh/ansarzeinulla/9Q)
+[![Docs](https://img.shields.io/badge/Docs-Doxygen-blue)](https://ansarzeinulla.github.io/9Q/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![arXiv](https://img.shields.io/badge/arXiv-2407.XXXXX-b31b1b.svg)](https://arxiv.org/)
+[![WASM Demo](https://img.shields.io/badge/Play_Live-WebAssembly-blueviolet)](https://9qumalaq.vercel.app/)
 
-### 🎮 **[PLAY LIVE WEB DEMO HERE](https://9qumalaq.vercel.app/)** | 📖 **[API DOCUMENTATION](https://ansarzeinulla.github.io/9Q/)**
+🎮 **[PLAY LIVE WEB DEMO HERE](https://9qumalaq.vercel.app/)** | 📖 **[API DOCUMENTATION](https://ansarzeinulla.github.io/9Q/)**
 
-
-> **A production-grade C++17 engine bounding the $1.51 \times 10^{25}$ state-space of Togyzkumalak. Engineered with 16-byte strictly-aligned Transposition Tables, an exhaustive 11-halfmove terminal game mathematical proof, and a 1-Billion game empirical search heuristic.**
+**A production-grade C++17 engine bounding the $1.51 \times 10^{25}$ state-space of Togyzkumalak. Engineered with 16-byte strictly-aligned Transposition Tables, an exhaustive 11-halfmove terminal game mathematical proof, and a 1-Billion game empirical search heuristic.**
 
 ## 🔬 Architecture & Mathematical Bounding
 
