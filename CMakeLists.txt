@@ -58,4 +58,38 @@ if(NOT EMSCRIPTEN)
     # Perft Testing Suite
     add_executable(perft_test tests/perft.cpp)
     target_link_libraries(perft_test PRIVATE togyz_core)
+
+    # Coverage Option
+    option(ENABLE_COVERAGE "Enable coverage instrumentation" OFF)
+    if(ENABLE_COVERAGE)
+        if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+            add_compile_options(--coverage -O0 -g)
+            add_link_options(--coverage)
+        endif()
+    endif()
+
+    # Google Test Integration
+    include(FetchContent)
+    FetchContent_Declare(
+      googletest
+      URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz
+    )
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(googletest)
+
+    enable_testing()
+
+    # Unit Tests
+    add_executable(test_zobrist_hashing tests/test_zobrist_hashing.cpp)
+    target_link_libraries(test_zobrist_hashing PRIVATE togyz_core gtest_main)
+    add_test(NAME test_zobrist_hashing COMMAND test_zobrist_hashing)
+
+    add_executable(test_tt_eviction tests/test_tt_eviction.cpp)
+    target_link_libraries(test_tt_eviction PRIVATE togyz_core gtest_main)
+    add_test(NAME test_tt_eviction COMMAND test_tt_eviction)
+
+    add_executable(test_evaluation tests/test_evaluation.cpp)
+    target_link_libraries(test_evaluation PRIVATE togyz_core gtest_main)
+    add_test(NAME test_evaluation COMMAND test_evaluation)
 endif()
+

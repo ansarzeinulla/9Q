@@ -1,0 +1,46 @@
+name: Code Coverage
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake lcov g++
+
+    - name: Configure CMake
+      run: |
+        cmake -B build -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON
+
+    - name: Build tests
+      run: |
+        cmake --build build -j $(nproc)
+
+    - name: Run Tests
+      run: |
+        ctest --test-dir build --output-on-failure
+
+    - name: Capture Coverage Info
+      run: |
+        # Capture raw coverage files
+        lcov --directory build --capture --output-file raw_coverage.info
+        # Filter out system and third-party files (like googletest headers)
+        lcov --remove raw_coverage.info '/usr/*' '*/_deps/*' '*/tests/*' --output-file coverage.info
+        # Print summary
+        lcov --list coverage.info
+
+    - name: Upload to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: coverage.info
+        fail_ci_if_error: true
+        token: ${{ secrets.CODECOV_TOKEN }}

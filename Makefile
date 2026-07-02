@@ -8,6 +8,8 @@ build:
 
 test: build
 	./build/perft_test
+	ctest --test-dir build --output-on-failure
+
 
 wasm:
 	npm run build:wasm

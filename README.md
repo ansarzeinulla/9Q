@@ -4,14 +4,35 @@
 🇺🇸 [English](README.md) | 🇰🇿 [Қазақша](docs/locales/README_kk.md) | 🇷🇺 [Русский](docs/locales/README_ru.md) | 🇰🇬 [Кыргызча](docs/locales/README_ky.md)
 
 [![CI/CD Pipeline](https://github.com/ansarzeinulla/9Q/actions/workflows/build.yml/badge.svg)](https://github.com/ansarzeinulla/9Q/actions)
+[![codecov](https://codecov.io/gh/ansarzeinulla/9Q/graph/badge.svg)](https://codecov.io/gh/ansarzeinulla/9Q)
 [![CodeQL](https://github.com/ansarzeinulla/9Q/actions/workflows/codeql.yml/badge.svg)](https://github.com/ansarzeinulla/9Q/security/code-scanning)
+[![Docs](https://img.shields.io/badge/Docs-Doxygen_Awesome-blue)](https://ansarzeinulla.github.io/9Q/)
+[![WASM Demo](https://img.shields.io/badge/Play_Live-WebAssembly-blueviolet)](https://9qumalaq.vercel.app/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![arXiv](https://img.shields.io/badge/arXiv-2407.XXXXX-b31b1b.svg)](https://arxiv.org/)
-[![WASM Demo](https://img.shields.io/badge/Play_Live-WebAssembly-blueviolet)](https://9qumalaq.vercel.app/)
+
+### 🎮 **[PLAY LIVE WEB DEMO HERE](https://9qumalaq.vercel.app/)** | 📖 **[API DOCUMENTATION](https://ansarzeinulla.github.io/9Q/)**
+
 
 > **A production-grade C++17 engine bounding the $1.51 \times 10^{25}$ state-space of Togyzkumalak. Engineered with 16-byte strictly-aligned Transposition Tables, an exhaustive 11-halfmove terminal game mathematical proof, and a 1-Billion game empirical search heuristic.**
 
 ## 🔬 Architecture & Mathematical Bounding
+
+```mermaid
+graph LR
+    subgraph Browser ["Client Arena (Web Browser)"]
+        JS["JS Client Arena (UI)"] <--> WASM["Emscripten/WebAssembly"]
+    end
+    subgraph Engine ["C++ Engine Core"]
+        WASM <--> Core["C++ Minimax Core"]
+        Core <--> TT["16-byte TT Cache"]
+    end
+    style JS fill:#4f46e5,stroke:#312e81,stroke-width:2px,color:#fff
+    style WASM fill:#0ea5e9,stroke:#0369a1,stroke-width:2px,color:#fff
+    style Core fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff
+    style TT fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff
+```
+
 
 This is not a standard board game engine. It is a highly optimized systems-level simulator designed to brutally exhaust the branching factor of Togyzkumalak. 
 
@@ -54,6 +75,24 @@ cmake --build build -j $(nproc)
 ```
 
 *(To build the WebAssembly target, see `docs/WASM_BUILD.md` for Emscripten `emcmake` instructions).*
+
+## 📊 Academic Reproducibility
+
+Rigorous scientific reproducibility is a core tenet of this project. The empirical data backing the state-space and branching factor claims in our paper (1-Billion game sample) can be regenerated and visualized using the included Python tooling.
+
+To reproduce the exact academic figures (Figures 1, 2, and 3 from the paper):
+
+```bash
+# 1. Navigate to the research directory
+cd research
+
+# 2. Install data analysis dependencies
+pip install -r requirements.txt
+
+# 3. Execute the visualization script against the sample dataset
+python reproduce_figures.py
+```
+*Outputs will be saved as high-resolution `300dpi` PNGs in `research/output/`.*
 
 ## 📚 Citation
 
