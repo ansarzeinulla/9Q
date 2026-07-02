@@ -33,7 +33,7 @@ jobs:
     - name: Generate Documentation
       run: |
         mkdir -p build/docs
-        doxygen Doxyfile
+         (cat Doxyfile; echo "OUTPUT_DIRECTORY = build/docs") | doxygen -
 
     - name: Setup Pages
       uses: actions/configure-pages@v5
