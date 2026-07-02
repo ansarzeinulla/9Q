@@ -1,3 +1,34 @@
+// ============================================================================
+// CHROME RESIZABLE ARRAYBUFFER WORKAROUND POLYFILL
+// Intercepts crypto.getRandomValues to prevent Chrome from crashing when 
+// passed views into resizable WebAssembly memory bounds.
+// ============================================================================
+if (self.crypto && typeof self.crypto.getRandomValues === "function") {
+  const originalGetRandomValues = self.crypto.getRandomValues.bind(self.crypto);
+  self.crypto.getRandomValues = function (array) {
+    try {
+      return originalGetRandomValues(array);
+    } catch (err) {
+      // If Chrome throws because the array view is backed by resizable memory
+      if (err instanceof TypeError && array && array.buffer) {
+        // 1) Create a temporary, stable, non-resizable typed array of the exact same size
+        const temp = new Uint8Array(array.byteLength);
+        
+        // 2) Safely fill the temporary buffer with cryptographically strong values
+        originalGetRandomValues(temp);
+        
+        // 3) Copy the values back into the resizable WebAssembly memory view
+        const destView = new Uint8Array(array.buffer, array.byteOffset, array.byteLength);
+        destView.set(temp);
+        
+        return array;
+      }
+      throw err;
+    }
+  };
+}
+// ============================================================================
+
 let modulePromise = null;
 
 async function loadEngine() {
@@ -11,9 +42,8 @@ async function loadEngine() {
         })
       )
       .catch((err) => {
-        // DIAGNOSTIC 1: Log the exact error why dynamic import or instantiation failed
         console.error("Wasm Engine Dynamic Import Failed:", err);
-        throw err; // Throw the actual error so it propagates to the UI
+        throw err;
       });
   }
   return modulePromise;
@@ -132,7 +162,6 @@ self.addEventListener("message", async (event) => {
 
     self.postMessage({ id, ok: true, payload: response });
   } catch (error) {
-    // DIAGNOSTIC 2: Log the exact error to the console
     console.error("Worker Listener Error Caught:", error);
     self.postMessage({
       id,
