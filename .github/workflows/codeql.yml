@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [ "main" ]
   schedule:
-    - cron: '30 18 * * 1' # Runs every Monday
+    - cron: '30 18 * * 1'
 
 jobs:
   analyze:
@@ -19,15 +19,22 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
+      uses: github/codeql-action/init@v3
       with:
         languages: 'cpp'
 
-    - name: Autobuild C++ Engine
-      uses: github/codeql-action/autobuild@v2
+    - name: Install Build Dependencies
+      run: sudo apt-get update && sudo apt-get install -y build-essential clang
+
+    # We manually compile each subdirectory so CodeQL can trace the clang++ compiler calls
+    - name: Custom Build for CodeQL Tracing
+      run: |
+        make -C engine CXX=clang++
+        make -C billion-game-generation CXX=clang++
+        make -C shortest-game-generation CXX=clang++
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
+      uses: github/codeql-action/analyze@v3
