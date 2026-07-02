@@ -19,8 +19,12 @@ jobs:
 
     - name: Check Formatting
       run: |
-        # Check formatting of all source/header files. Dry-run and return non-zero exit on diff.
-        find src include tests -name '*.cpp' -o -name '*.hpp' | xargs clang-format --dry-run --Werror
+        # Apply clang-format in-place, then fail if git reports any diff.
+        # This makes the CI's installed clang-format version the authority.
+        find src include tests -name '*.cpp' -o -name '*.hpp' \
+          | xargs clang-format -i
+        git diff --exit-code || \
+          (echo "ERROR: Files are not clang-formatted. Run clang-format -i on changed files." && exit 1)
 
     - name: Configure CMake for compilation database
       run: |
@@ -28,5 +32,5 @@ jobs:
 
     - name: Run Clang-Tidy
       run: |
-        # Run clang-tidy on target source files
+        # Run clang-tidy on target source files only
         find src -name '*.cpp' | xargs clang-tidy -p build
