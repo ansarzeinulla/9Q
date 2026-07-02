@@ -32,19 +32,17 @@ jobs:
 
     - name: Generate Documentation
       run: |
-        mkdir -p build/docs
-         (cat Doxyfile; echo "OUTPUT_DIRECTORY = build/docs") | doxygen -
+        (cat Doxyfile; echo "OUTPUT_DIRECTORY = docs") | doxygen -
 
     - name: Setup Pages
       uses: actions/configure-pages@v5
-      continue-on-error: true
       with:
         enablement: true
 
     - name: Upload Artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        path: 'build/docs/html'
+        path: 'docs/html'
 
   deploy-docs:
     environment:
@@ -55,6 +53,4 @@ jobs:
     steps:
     - name: Deploy to GitHub Pages
       id: deployment
-      continue-on-error: true
       uses: actions/deploy-pages@v4
-

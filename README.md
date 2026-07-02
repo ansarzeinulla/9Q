@@ -4,8 +4,7 @@
 
 [![CI/CD Pipeline](https://github.com/ansarzeinulla/9Q/actions/workflows/build.yml/badge.svg)](https://github.com/ansarzeinulla/9Q/actions)
 [![CodeQL](https://github.com/ansarzeinulla/9Q/actions/workflows/codeql.yml/badge.svg)](https://github.com/ansarzeinulla/9Q/security/code-scanning)
-[![Codecov](https://codecov.io/gh/ansarzeinulla/9Q/graph/badge.svg)](https://codecov.io/gh/ansarzeinulla/9Q)
-[![Docs](https://img.shields.io/badge/Docs-Doxygen-blue)](https://ansarzeinulla.github.io/9Q/)
+[![codecov](https://codecov.io/github/ansarzeinulla/9Q/graph/badge.svg?token=B6H1ME1G84)](https://codecov.io/github/ansarzeinulla/9Q)[![Docs](https://img.shields.io/badge/Docs-Doxygen-blue)](https://ansarzeinulla.github.io/9Q/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![arXiv](https://img.shields.io/badge/arXiv-2407.XXXXX-b31b1b.svg)](https://arxiv.org/)
 [![WASM Demo](https://img.shields.io/badge/Play_Live-WebAssembly-blueviolet)](https://9qumalaq.vercel.app/)
