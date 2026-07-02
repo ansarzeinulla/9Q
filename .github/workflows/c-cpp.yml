@@ -1,24 +1,33 @@
-name: C / C++
+name: C++ Engine Build & Perft Validation
 
 on:
   push:
+    branches: [ "main" ]
   pull_request:
+    branches: [ "main" ]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v3
 
-      - name: Install build tools
-        run: sudo apt-get update && sudo apt-get install -y clang make
+    - name: Install dependencies
+      run: sudo apt-get update && sudo apt-get install -y build-essential clang
 
-      - name: Build engine tests
-        working-directory: engine
-        run: make test
+    - name: Build Minimax Engine & Perft Suite
+      working-directory: ./engine
+      run: make CXX=clang++
 
-      - name: Run perft suite
-        working-directory: engine
-        run: make perft
+    - name: Run Perft Mathematical Verification (Depth 1-4)
+      working-directory: ./engine
+      run: make test CXX=clang++
+
+    - name: Build Billion-Game Simulator
+      working-directory: ./billion-game-generation
+      run: make CXX=clang++
+
+    - name: Build Shortest-Game Engine
+      working-directory: ./shortest-game-generation
+      run: make CXX=clang++
