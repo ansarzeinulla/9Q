@@ -12,7 +12,7 @@
 This repository contains the official, self-contained C++ source code for the paper:
 
 **Combinatorial State-Space and Empirical Game Tree Complexity of Togyzkumalak: A Billion-Game Analysis**  
-*Ansar Zeinulla (2026)* | [Read the Paper on arXiv](Not uploaded yet)
+*Ansar Zeinulla (2026)* | [Read the Paper on the arXiv](Not uploaded yet)
 
 ## Repository Structure
 
