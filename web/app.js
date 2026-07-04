@@ -1,201 +1,6 @@
+import { I18N, LANGUAGE_STORAGE_KEY, getStoredLanguage, storeLanguage, translate } from "/i18n.js";
+
 const INITIAL_FEN = "9,9,9,9,9,9,9,9,9/9,9,9,9,9,9,9,9,9 0,0 -,- w 0";
-
-const I18N = {
-  en: {
-    language: "Language",
-    arxivSoon: "arXiv soon",
-    mainTitle: "Browser Togyzkumalak engine",
-    intro: "Choose players, set time per move for bots, optionally paste an initial position's FEN, then start.",
-    instructionOne: "Click one of your nine pits to move.",
-    instructionTwo: "Bots run locally in WebAssembly inside your browser.",
-    instructionThree: "Download the move list as 9Q-PGN from the game page.",
-    white: "Beginner",
-    black: "Follower",
-    human: "Human",
-    randombot: "Random Bot",
-    minimax: "Mini Max",
-    dag: "DAG",
-    timePerMove: "Time per move",
-    noTimer: "No timer",
-    fen: "FEN",
-    pgnInput: "PGN (for analysis)",
-    startGame: "Start",
-    initialFen: "Initial FEN",
-    analyzePgn: "Analyze PGN",
-    analysisButton: "Analysis",
-    downloadPgnButton: "PGN",
-    formats: "Formats",
-    fenTitle: "9Q-FEN",
-    fenExplain: "FEN has five fields: white pits / black pits, kazans, tuzdyks, side to move, and half-move count.",
-    fenDetails: "Pits are listed 1-9 for each owner. Tuzdyks use owner pit numbers or “-”. Beginner is “w” and Follower is “b”.",
-    pgnTitle: "9Q-PGN",
-    pgnExplain: "PGN stores chess-like tags followed by move pairs. Each move is two digits: origin pit and landing pit, both 1-9 relative to the owner of that cell.",
-    pgnDetails: "“+” marks a capture. “x” marks tuzdyk creation.",
-    setup: "Setup",
-    statusLoading: "",
-    statusReady: "",
-    statusPlaying: "",
-    wasmMissing: "Engine Wasm not found. Run npm run build:wasm before npm run build.",
-    fenInvalid: "Invalid FEN. Use the 9Q-FEN format shown below.",
-    unknownEngineError: "Engine request failed.",
-    whiteToMove: "Beginner's turn",
-    blackToMove: "Follower's turn",
-    whiteThinking: "Beginner is thinking...",
-    blackThinking: "Follower is thinking...",
-    whiteWins: "Beginner wins",
-    blackWins: "Follower wins",
-    draw: "Draw",
-    gameOver: "Game over",
-    pitLabel: "{side} pit {pit}, {stones} stones",
-    tuzdykPitLabel: "{side} pit {pit}, tuzdyk"
-  },
-  ru: {
-    language: "Язык",
-    arxivSoon: "Скоро на arXiv",
-    mainTitle: "Браузерный движок тогызкумалака",
-    intro: "Выберите игроков, установите время на ход для ботов, при желании вставьте FEN начальной позиции и начните игру.",
-    instructionOne: "Нажмите на одну из ваших девяти лунок, чтобы сделать ход.",
-    instructionTwo: "Боты работают локально через WebAssembly прямо в вашем браузере.",
-    instructionThree: "Скачайте список ходов в формате 9Q-PGN со страницы игры.",
-    white: "Начинающий",
-    black: "Отвечающий",
-    human: "Человек",
-    randombot: "Случайный бот",
-    minimax: "Mini Max",
-    dag: "DAG",
-    timePerMove: "Время на ход",
-    noTimer: "Без таймера",
-    fen: "FEN",
-    pgnInput: "PGN (для анализа)",
-    startGame: "Начать",
-    initialFen: "Начальный FEN",
-    analyzePgn: "Анализировать PGN",
-    analysisButton: "Анализ",
-    downloadPgnButton: "PGN",
-    formats: "Форматы",
-    fenTitle: "9Q-FEN",
-    fenExplain: "FEN состоит из пяти полей: лунки начинающего / лунки отвечающего, казаны, туздыки, чей ход и счетчик полуходов.",
-    fenDetails: "Лунки нумеруются от 1 до 9 для каждого игрока. Для туздыков используются номера лунок владельца или «-». Начинающий — «w», отвечающий — «b».",
-    pgnTitle: "9Q-PGN",
-    pgnExplain: "PGN содержит теги, подобные шахматным, за которыми следуют пары ходов. Каждый ход состоит из двух цифр: исходная лунка и конечная лунка, обе от 1 до 9 относительно владельца этой лунки.",
-    pgnDetails: "«+» означает захват (выигрыш). «x» означает создание туздыка.",
-    setup: "Настройки",
-    statusLoading: "",
-    statusReady: "",
-    statusPlaying: "",
-    wasmMissing: "Wasm движка не найден. Запустите npm run build:wasm перед npm run build.",
-    fenInvalid: "Неверный FEN. Используйте формат 9Q-FEN, показанный ниже.",
-    unknownEngineError: "Ошибка запроса к движку.",
-    whiteToMove: "Ход начинающего",
-    blackToMove: "Ход отвечающего",
-    whiteThinking: "Начинающий думает...",
-    blackThinking: "Отвечающий думает...",
-    whiteWins: "Победа начинающего",
-    blackWins: "Победа отвечающего",
-    draw: "Ничья",
-    gameOver: "Игра окончена",
-    pitLabel: "{side} лунка {pit}, {stones} кумалаков",
-    tuzdykPitLabel: "{side} лунка {pit}, туздык"
-},
-
-kk: {
-    language: "Тіл",
-    arxivSoon: "Жақында arXiv-те",
-    mainTitle: "Браузердегі тоғызқұмалақ қозғалтқышы",
-    intro: "Ойыншыларды таңдаңыз, боттар үшін жүріс уақытын орнатыңыз, қажет болса бастапқы позицияның FEN кодын қойып, ойынды бастаңыз.",
-    instructionOne: "Жүріс жасау үшін өзіңіздің тоғыз отауыңыздың бірін басыңыз.",
-    instructionTwo: "Боттар браузеріңіздің ішінде WebAssembly арқылы локальді түрде жұмыс істейді.",
-    instructionThree: "Жүрістер тізімін ойын бетінен 9Q-PGN форматында жүктеп алыңыз.",
-    white: "Бастаушы",
-    black: "Қостаушы",
-    human: "Адам",
-    randombot: "Кездейсоқ бот",
-    minimax: "Mini Max",
-    dag: "DAG",
-    timePerMove: "Жүріс уақыты",
-    noTimer: "Таймерсіз",
-    fen: "FEN",
-    pgnInput: "PGN (талдау үшін)",
-    startGame: "Бастау",
-    initialFen: "Бастапқы FEN",
-    analyzePgn: "PGN талдау",
-    analysisButton: "Талдау",
-    downloadPgnButton: "PGN",
-    formats: "Форматтар",
-    fenTitle: "9Q-FEN",
-    fenExplain: "FEN бес бөліктен тұрады: бастаушының отаулары / қостаушының отаулары, қазандар, тұздықтар, жүріс кезегі және жартылай жүріс санағышы.",
-    fenDetails: "Әр ойыншының отаулары 1-ден 9-ға дейін нөмірленеді. Тұздықтар үшін иесінің отау нөмірі немесе «-» белгісі қолданылады. Бастаушы — «w», ал қостаушы — «b».",
-    pgnTitle: "9Q-PGN",
-    pgnExplain: "PGN шахматқа ұқсас тегтерді және одан кейінгі жүрістер жұбын сақтайды. Әр жүріс екі санмен жазылады: бастапқы отау және түскен отау, екеуі де осы отау иесіне қатысты 1-9 аралығында көрсетіледі.",
-    pgnDetails: "«+» ұтып алуды (құмалақ түсіруді) білдіреді. «x» тұздық алуды білдіреді.",
-    setup: "Баптаулар",
-    statusLoading: "",
-    statusReady: "",
-    statusPlaying: "",
-    wasmMissing: "Қозғалтқыштың Wasm файлы табылмады. npm run build алдында npm run build:wasm іске қосыңыз.",
-    fenInvalid: "Қате FEN. Төменде көрсетілген 9Q-FEN форматын пайдаланыңыз.",
-    unknownEngineError: "Қозғалтқышқа сұраныс қатемен аяқталды.",
-    whiteToMove: "Бастаушының жүрісі",
-    blackToMove: "Қостаушының жүрісі",
-    whiteThinking: "Бастаушы ойлануда...",
-    blackThinking: "Қостаушы ойлануда...",
-    whiteWins: "Бастаушы жеңді",
-    blackWins: "Қостаушы жеңді",
-    draw: "Тең түсу",
-    gameOver: "Ойын аяқталды",
-    pitLabel: "{side} {pit}-отау, {stones} құмалақ",
-    tuzdykPitLabel: "{side} {pit}-отау, тұздық"
-},
-
-ky: {
-    language: "Тил",
-    arxivSoon: "Жакында arXiv'де",
-    mainTitle: "Браузердеги тогуз коргоол кыймылдаткычы",
-    intro: "Оюнчуларды тандаңыз, боттор үчүн жүрүш убактысын орнотуңуз, кааласаңыз баштапкы позициянын FEN кодун киргизип, оюнду баштаңыз.",
-    instructionOne: "Жүрүш жасоо үчүн өзүңүздүн тогуз үйүңүздүн бирин басыңыз.",
-    instructionTwo: "Боттор WebAssembly аркылуу браузериңиздин ичинде локалдуу иштешет.",
-    instructionThree: "Жүрүштөрдүн тизмесин оюн барагынан 9Q-PGN форматында жүктөп алыңыз.",
-    white: "Баштоочу",
-    black: "Коштоочу",
-    human: "Адам",
-    randombot: "Кокустук бот",
-    minimax: "Mini Max",
-    dag: "DAG",
-    timePerMove: "Жүрүш убактысы",
-    noTimer: "Таймерсиз",
-    fen: "FEN",
-    pgnInput: "PGN (анализ үчүн)",
-    startGame: "Баштоо",
-    initialFen: "Баштапкы FEN",
-    analyzePgn: "PGN анализ",
-    analysisButton: "Анализ",
-    downloadPgnButton: "PGN",
-    formats: "Форматтар",
-    fenTitle: "9Q-FEN",
-    fenExplain: "FEN беш бөлүктөн турат: баштоочунун үйлөрү / коштоочунун үйлөрү, казандар, туздар, жүрүү кезеги жана жарым жүрүштөрдүн эсептегичи.",
-    fenDetails: "Ар бир оюнчунун үйлөрү 1ден 9га чейин номерленет. Туздар үчүн ээсинин үйүнүн номери же «-» колдонулат. Баштоочу — «w», ал эми коштоочу — «b».",
-    pgnTitle: "9Q-PGN",
-    pgnExplain: "PGN шахматка окшош тегдерди жана андан кийинки жүрүштөр жуптарын сактайт. Ар бир жүрүш эки сан менен жазылат: баштапкы үй жана түшкөн үй, экөө тең ошол үйдүн ээсине карата 1ден 9га чейин көрсөтүлөт.",
-    pgnDetails: "«+» утуп алууну билдирет. «x» туз алууну билдирет.",
-    setup: "Жөндөөлөр",
-    statusLoading: "",
-    statusReady: "",
-    statusPlaying: "",
-    wasmMissing: "Кыймылдаткычтын Wasm файлы табылган жок. npm run build алдында npm run build:wasm иштетиңиз.",
-    fenInvalid: "Туура эмес FEN. Төмөндө көрсөтүлгөн 9Q-FEN форматын колдонуңуз.",
-    unknownEngineError: "Кыймылдаткычка суроо-талап ката менен аяктады.",
-    whiteToMove: "Баштоочунун жүрүшү",
-    blackToMove: "Коштоочунун жүрүшү",
-    whiteThinking: "Баштоочу ойлонууда...",
-    blackThinking: "Коштоочу ойлонууда...",
-    whiteWins: "Баштоочу жеңди",
-    blackWins: "Коштоочу жеңди",
-    draw: "Тең чыгуу",
-    gameOver: "Оюн бүттү",
-    pitLabel: "{side} {pit}-үй, {stones} коргоол",
-    tuzdykPitLabel: "{side} {pit}-үй, туз"
-}
-};
 
 const PLAYER_KEYS = {
   human: "human",
@@ -207,8 +12,7 @@ const PLAYER_KEYS = {
 const STORAGE_KEYS = {
   pgn: "togyzkumalak_pgn",
   analysisMoveIndex: "togyzkumalak_analysis_move_index",
-  resumeFen: "togyzkumalak_resume_fen",
-  language: "togyzkumalak_language"
+  resumeFen: "togyzkumalak_resume_fen"
 };
 
 const els = {
@@ -268,7 +72,7 @@ class EngineClient {
 }
 
 const engine = new EngineClient();
-let lang = localStorage.getItem(STORAGE_KEYS.language) || "en";
+let lang = getStoredLanguage();
 let pendingResumeFen = localStorage.getItem(STORAGE_KEYS.resumeFen) || "";
 let state = createInitialState();
 let engineReady = false;
@@ -300,13 +104,7 @@ function createInitialState() {
 }
 
 function t(key, args = {}) {
-  const table = I18N[lang] || I18N.en;
-  const template = Object.prototype.hasOwnProperty.call(table, key)
-    ? table[key]
-    : Object.prototype.hasOwnProperty.call(I18N.en, key)
-      ? I18N.en[key]
-      : key;
-  return template.replace(/\{(\w+)\}/g, (_, name) => String(args[name] ?? ""));
+  return translate(lang, key, args);
 }
 
 function errorKey(error) {
@@ -714,7 +512,7 @@ els.downloadPgn.addEventListener("click", downloadPgn);
 
 els.language.addEventListener("change", () => {
   lang = els.language.value;
-  localStorage.setItem(STORAGE_KEYS.language, lang);
+  storeLanguage(lang);
   applyTranslations();
   render();
 });

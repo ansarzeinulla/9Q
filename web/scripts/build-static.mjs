@@ -27,7 +27,7 @@ if (missingWasm.length > 0 && !allowMissingWasm) {
 await rm(out, { recursive: true, force: true });
 await mkdir(out, { recursive: true });
 
-for (const file of ["index.html", "game.html", "analysis.html", "styles.css", "app.js", "engine-worker.js", "togyzkumalak-pgn.css", "togyzkumalak-pgn.js"]) {
+for (const file of ["index.html", "analysis.html", "styles.css", "app.js", "engine-worker.js", "i18n.js", "togyzkumalak-pgn.js"]) {
   await cp(path.join(web, file), path.join(out, file));
 }
 

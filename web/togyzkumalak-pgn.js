@@ -1,75 +1,13 @@
 // Togyzkumalak PGN Viewer
 
-const INITIAL_FEN = "9,9,9,9,9,9,9,9,9/9,9,9,9,9,9,9,9,9 0,0 -,- w 0";
+import { I18N, getStoredLanguage, storeLanguage, translate } from "/i18n.js";
 
-const I18N = {
-  en: {
-    analysisTitle: "Togyzkumalak PGN Viewer",
-    backToGame: "Back to Game",
-    playFromHere: "Play from here",
-    moveHistory: "Move History",
-    moveHistoryHint: "Click any move to jump to that position.",
-    engineEvaluations: "Engine Evaluations",
-    engineHint: "Best lines from the current position.",
-    dagAnalysis: "DAG Analysis",
-    analyze: "Analyzing...",
-    winningPosition: "Winning position",
-    losingPosition: "Losing position",
-    beginner: "Beginner",
-    follower: "Follower"
-  },
-  ru: {
-    analysisTitle: "Просмотрщик PGN тогызкумалака",
-    backToGame: "Назад к игре",
-    playFromHere: "Играть отсюда",
-    moveHistory: "История ходов",
-    moveHistoryHint: "Нажмите на любой ход, чтобы перейти к этой позиции.",
-    engineEvaluations: "Оценки движка",
-    engineHint: "Лучшие варианты из текущей позиции.",
-    dagAnalysis: "Анализ DAG",
-    analyze: "Анализ...",
-    winningPosition: "Выигрышная позиция",
-    losingPosition: "Проигрышная позиция",
-    beginner: "Начинающий",
-    follower: "Отвечающий"
-  },
-  kk: {
-    analysisTitle: "Тоғызқұмалақ PGN қарауышы",
-    backToGame: "Ойынға қайту",
-    playFromHere: "Осы жерден ойнау",
-    moveHistory: "Жүрістер тарихы",
-    moveHistoryHint: "Осы позицияға өту үшін кез келген жүрісті басыңыз.",
-    engineEvaluations: "Қозғалтқыш бағалауы",
-    engineHint: "Ағымдағы позициядағы ең жақсы жүрістер.",
-    dagAnalysis: "DAG талдау",
-    analyze: "Талдау...",
-    winningPosition: "Ұтатын позиция",
-    losingPosition: "Ұтылатын позиция",
-    beginner: "Бастаушы",
-    follower: "Қостаушы"
-  },
-  ky: {
-    analysisTitle: "Тогуз коргоол PGN көрүүчү",
-    backToGame: "Оюнга кайтуу",
-    playFromHere: "Бул жерден ойноо",
-    moveHistory: "Жүрүш тарыхы",
-    moveHistoryHint: "Бул позицияга өтүү үчүн каалаган жүрүштү басыңыз.",
-    engineEvaluations: "Кыймылдаткыч баалоосу",
-    engineHint: "Учурдагы позициядагы эң жакшы жүрүштөр.",
-    dagAnalysis: "DAG талдоо",
-    analyze: "Талдоо...",
-    winningPosition: "Жеңиштүү позиция",
-    losingPosition: "Жеңилүүчү позиция",
-    beginner: "Баштоочу",
-    follower: "Коштоочу"
-  }
-};
+const INITIAL_FEN = "9,9,9,9,9,9,9,9,9/9,9,9,9,9,9,9,9,9 0,0 -,- w 0";
 
 const STORAGE_KEYS = {
   pgn: "togyzkumalak_pgn",
   analysisMoveIndex: "togyzkumalak_analysis_move_index",
-  analysisFen: "togyzkumalak_resume_fen",
-  language: "togyzkumalak_language"
+  resumeFen: "togyzkumalak_resume_fen"
 };
 
 // State
@@ -85,7 +23,7 @@ let currentEvaluations = [];
 let syncPromise = Promise.resolve();
 let dagTimer = null;
 let currentAnalysisGen = 0;
-let lang = localStorage.getItem(STORAGE_KEYS.language) || "en";
+let lang = getStoredLanguage();
 
 // DOM elements
 const els = {
@@ -105,8 +43,8 @@ const els = {
   blackKazan: document.getElementById('black-kazan')
 };
 
-function t(key) {
-  return (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
+function t(key, args) {
+  return translate(lang, key, args);
 }
 
 function applyTranslations() {
@@ -129,9 +67,14 @@ function applyTranslations() {
   if (dagLabel) dagLabel.textContent = t("dagAnalysis");
   const whiteLabel = document.querySelector("#white-kazan").parentElement?.querySelector(".side-label");
   const blackLabel = document.querySelector("#black-kazan").parentElement?.querySelector(".side-label");
-  if (whiteLabel) whiteLabel.textContent = t("beginner");
-  if (blackLabel) blackLabel.textContent = t("follower");
+  if (whiteLabel) whiteLabel.textContent = t("white");
+  if (blackLabel) blackLabel.textContent = t("black");
   if (els.language) els.language.value = lang;
+  if (els.navFirst) els.navFirst.title = t("navFirst");
+  if (els.navPrev) els.navPrev.title = t("navPrev");
+  if (els.navNext) els.navNext.title = t("navNext");
+  if (els.navLast) els.navLast.title = t("navLast");
+  if (els.rotateBoard) els.rotateBoard.title = t("rotateBoard");
 }
 
 // Engine client (similar to app.js)
@@ -310,14 +253,14 @@ function updateGameInfo() {
     
     if (currentPosition.gameOver) {
       if (currentPosition.winner === "white") {
-        els.turnLabel.textContent = "Beginner wins";
+        els.turnLabel.textContent = t("whiteWins");
       } else if (currentPosition.winner === "black") {
-        els.turnLabel.textContent = "Follower wins";
+        els.turnLabel.textContent = t("blackWins");
       } else {
-        els.turnLabel.textContent = "Draw";
+        els.turnLabel.textContent = t("draw");
       }
     } else {
-      els.turnLabel.textContent = currentPosition.toPlay === "white" ? "Beginner's turn" : "Follower's turn";
+      els.turnLabel.textContent = currentPosition.toPlay === "white" ? t("whiteToMove") : t("blackToMove");
     }
   }
 }
@@ -596,7 +539,8 @@ function renderEvaluations() {
     const safeScore = typeof rawScore === 'number' && !isNaN(rawScore) ? rawScore : 0;
     
     const pit = evaluation.pit !== undefined ? evaluation.pit : evaluation.move;
-    const safeNotation = getMoveNotation(currentPosition, currentPosition.toPlay, pit);
+    const engineNotation = evaluation.move && typeof evaluation.move === "object" ? evaluation.move.notation : "";
+    const safeNotation = engineNotation || getMoveNotation(currentPosition, currentPosition.toPlay, pit);
     
     const moveEl = document.createElement('div');
     moveEl.className = 'evaluation-move';
@@ -726,7 +670,7 @@ function loadPgn(pgnString) {
 function playFromHere() {
   if (!currentPosition) return;
   localStorage.setItem(STORAGE_KEYS.resumeFen, allFens[currentMoveIndex + 1] || allFens[0] || INITIAL_FEN);
-  window.location.href = '/game.html';
+  window.location.href = '/';
 }
 // Rotate board
 function rotateBoard() {
@@ -770,7 +714,7 @@ els.navLast.addEventListener('click', goToLast);
 els.playFromHere?.addEventListener('click', playFromHere);
 els.language?.addEventListener('change', () => {
   lang = els.language.value;
-  localStorage.setItem(STORAGE_KEYS.language, lang);
+  storeLanguage(lang);
   applyTranslations();
   renderMoveHistory();
   updateGameInfo();
