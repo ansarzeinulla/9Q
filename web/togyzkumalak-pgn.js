@@ -148,10 +148,13 @@ function parseMove(moveStr) {
 
 // Render stone field (from app.js)
 function renderStoneField(count) {
-  const visible = Math.min(count, 18);
+  // Traditional notation: fixed 2x5 grid of 10 positions.
+  const filled = Math.min(count, 10);
+  const stacked = Math.min(Math.max(count - 10, 0), 10);
   let html = "";
-  for (let i = 0; i < visible; i++) {
-    html += '<span class="stone"></span>';
+  for (let i = 0; i < 10; i++) {
+    const cls = i < stacked ? "stone stacked" : i < filled ? "stone filled" : "stone empty";
+    html += `<span class="${cls}"></span>`;
   }
   return html;
 }

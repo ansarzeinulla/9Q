@@ -196,10 +196,14 @@ function pgnResult() {
 
 function renderStoneField(count, blocked) {
   if (blocked) return "";
-  const visible = Math.min(count, 18);
+  // Traditional notation: fixed 2x5 grid of 10 positions.
+  // filled = one kumalak, stacked = two or more on that spot, empty = outline.
+  const filled = Math.min(count, 10);
+  const stacked = Math.min(Math.max(count - 10, 0), 10);
   let html = "";
-  for (let i = 0; i < visible; i++) {
-    html += '<span class="stone"></span>';
+  for (let i = 0; i < 10; i++) {
+    const cls = i < stacked ? "stone stacked" : i < filled ? "stone filled" : "stone empty";
+    html += `<span class="${cls}"></span>`;
   }
   return html;
 }
