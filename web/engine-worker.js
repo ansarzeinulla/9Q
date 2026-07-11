@@ -69,9 +69,27 @@ self.addEventListener("message", async (event) => {
       const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(
         typeof navigator !== "undefined" ? navigator.userAgent : ""
       );
-      Module.ccall("tg_init_engine", null, ["number"], [payload?.ttMb || (isMobile ? 64 : 256)]);
+      // TT size: explicit setting wins; otherwise size to the device.
+      // navigator.deviceMemory is in GB (Chrome/Edge/Android); absent on
+      // Safari/iOS/Firefox, where we fall back to platform defaults.
+      let ttMb = Number(payload?.ttMb) || 0;
+      if (!ttMb) {
+        const deviceGb = typeof navigator !== "undefined" && navigator.deviceMemory
+          ? navigator.deviceMemory
+          : 0;
+        if (deviceGb) {
+          ttMb = Math.min(512, Math.max(64, Math.floor((deviceGb * 1024) / 8)));
+          if (isMobile) ttMb = Math.min(ttMb, 128);
+        } else {
+          ttMb = isMobile ? 128 : 256;
+        }
+      }
+      ttMb = Math.min(1024, Math.max(16, ttMb));
+      Module.ccall("tg_init_engine", null, ["number"], [ttMb]);
+      self.__ttMb = ttMb;
       response = {
         version: readString(Module, "_tg_version"),
+        ttMb,
         state: readJson(Module, "_tg_state_json"),
         fen: readString(Module, "_tg_fen_string")
       };
@@ -125,7 +143,7 @@ self.addEventListener("message", async (event) => {
           const move = readJson(Module, "_tg_last_move_json");
           const depthEvals = [];
           for (let depth = 1; depth <= 4; depth++) {
-            Module.ccall("tg_bot_move", "number", ["string", "number"], ["dag", 0.1]);
+            Module.ccall("tg_bot_move", "number", ["string", "number"], ["dagv2", 0.1]);
             const bot = readJson(Module, "_tg_last_bot_json");
             let score = 0;
             if (typeof bot.score === 'number') {

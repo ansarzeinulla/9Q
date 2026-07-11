@@ -33,7 +33,9 @@ emcc \
   src/position_hash.cpp \
   src/evaluation.cpp \
   src/minimax_engine.cpp \
-  src/dag_search.cpp \
+  src/dag_v1_search.cpp \
+  src/dag_v2_search.cpp \
+  src/console_render.cpp \
   web/wasm/togyz_wasm.cpp \
   -Iinclude \
   -std=c++17 \
@@ -45,7 +47,7 @@ emcc \
   -sENVIRONMENT=web,worker \
   -sALLOW_MEMORY_GROWTH=1 \
   -sINITIAL_MEMORY=134217728 \
-  -sMAXIMUM_MEMORY=1073741824 \
+  -sMAXIMUM_MEMORY=2147483648 \
   -sSTACK_SIZE=1048576 \
   -sMALLOC=emmalloc \
   -sFILESYSTEM=0 \

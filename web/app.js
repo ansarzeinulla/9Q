@@ -6,11 +6,13 @@ const PLAYER_KEYS = {
   human: "human",
   randombot: "randombot",
   minimax: "minimax",
-  dag4: "dag"
+  dag4: "dag",
+  dagv2: "dagv2"
 };
 
 const STORAGE_KEYS = {
   pgn: "togyzkumalak_pgn",
+  ttMemory: "togyzkumalak_tt_mb",
   analysisMoveIndex: "togyzkumalak_analysis_move_index",
   resumeFen: "togyzkumalak_resume_fen"
 };
@@ -23,6 +25,8 @@ const els = {
   language: document.querySelector("#language-select"),
   whitePlayer: document.querySelector("#white-player"),
   blackPlayer: document.querySelector("#black-player"),
+  ttMemory: document.querySelector("#tt-memory"),
+  deviceInfo: document.querySelector("#device-info"),
   whiteTime: document.querySelector("#white-time"),
   blackTime: document.querySelector("#black-time"),
   whiteTimeControl: document.querySelector("#white-time-control"),
@@ -161,7 +165,7 @@ function isHuman(side) {
 }
 
 function isTimedPlayerValue(player) {
-  return player === "minimax" || player === "dag4";
+  return player === "minimax" || player === "dag4" || player === "dagv2";
 }
 
 function isTimedPlayer(side) {
@@ -532,10 +536,48 @@ applyTranslations();
 els.fenInput.value = INITIAL_FEN;
 render();
 
+function selectedTtMb() {
+  const stored = Number(localStorage.getItem(STORAGE_KEYS.ttMemory)) || 0;
+  if (els.ttMemory) {
+    els.ttMemory.value = String(stored);
+    if (els.ttMemory.value !== String(stored)) els.ttMemory.value = "0";
+  }
+  return stored;
+}
+
+function describeDevice(appliedTtMb) {
+  const cores = navigator.hardwareConcurrency || 0;
+  const memGb = navigator.deviceMemory || 0;
+  const parts = [];
+  if (cores) parts.push(`${cores} ${t("deviceCores")}`);
+  if (memGb) parts.push(`~${memGb} GB RAM`);
+  if (appliedTtMb) parts.push(`TT ${appliedTtMb} MB`);
+  return parts.length ? `${t("deviceDetected")}: ${parts.join(" · ")}` : "";
+}
+
+function updateDeviceInfo(appliedTtMb) {
+  if (els.deviceInfo) els.deviceInfo.textContent = describeDevice(appliedTtMb);
+}
+
+if (els.ttMemory) {
+  els.ttMemory.addEventListener("change", async () => {
+    const mb = Number(els.ttMemory.value) || 0;
+    localStorage.setItem(STORAGE_KEYS.ttMemory, String(mb));
+    try {
+      const payload = await engine.send("init", { ttMb: mb });
+      updateDeviceInfo(payload.ttMb);
+      setStatus("statusReady");
+    } catch (error) {
+      setError(error);
+    }
+  });
+}
+
 engine
-  .send("init")
+  .send("init", { ttMb: selectedTtMb() })
   .then((payload) => {
     engineReady = true;
+    updateDeviceInfo(payload.ttMb);
     if (pendingResumeFen) {
       els.fenInput.value = pendingResumeFen;
       return startGame();

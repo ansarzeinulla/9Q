@@ -1,4 +1,5 @@
-#include "togyz/dag_search.hpp"
+#include "togyz/dag_v1_search.hpp"
+#include "togyz/dag_v2_search.hpp"
 #include "togyz/evaluation.hpp"
 #include "togyz/minimax_engine.hpp"
 #include "togyz/togyzkumalak_rules.hpp"
@@ -29,6 +30,34 @@ std::string bot_cache = "{\"move\":-1,\"bot\":\"none\",\"elapsedMs\":0,\"complet
 std::string move_cache = "{\"move\":-1,\"landingPit\":-1,\"notation\":\"\",\"suffix\":\"\",\"captured\":false,\"tuzdyk\":false,\"side\":\"\"}";
 std::string search_stats_cache = "{\"bot\":\"none\",\"elapsedMs\":0,\"nodes\":0,\"ttHits\":0,\"ttStores\":0,\"repetitionDraws\":0}";
 size_t current_tt_mb = 256;
+size_t v1_tt_mb = 0;
+size_t v2_tt_mb = 0;
+
+// Lazily size each engine's TT so memory is only spent on engines actually
+// used (v1 + v2 both at a large size could exceed the wasm memory cap).
+// When both engines are in use (e.g. v1 vs v2), cap each TT so the pair
+// stays well under the 2 GB wasm32 memory ceiling.
+size_t effective_tt_mb(bool other_engine_active) {
+    size_t mb = current_tt_mb;
+    if (other_engine_active && mb > 512) mb = 512;
+    return mb;
+}
+
+void ensure_v1_tt() {
+    size_t mb = effective_tt_mb(static_cast<bool>(dag_v2::global_tt));
+    if (!dag_v1::global_tt || v1_tt_mb != mb) {
+        dag_v1::init_tt(mb);
+        v1_tt_mb = mb;
+    }
+}
+
+void ensure_v2_tt() {
+    size_t mb = effective_tt_mb(static_cast<bool>(dag_v1::global_tt));
+    if (!dag_v2::global_tt || v2_tt_mb != mb) {
+        dag_v2::init_tt(mb);
+        v2_tt_mb = mb;
+    }
+}
 
 std::string lower_copy(const char* value) {
     std::string result = value == nullptr ? "" : value;
@@ -41,6 +70,7 @@ std::string normalize_bot(const char* value) {
     std::string bot = lower_copy(value);
     if (bot == "random" || bot == "randombot") return "randombot";
     if (bot == "ai" || bot == "ai4" || bot == "minimax") return "minimax";
+    if (bot == "dagv2" || bot == "dag2" || bot == "v2" || bot == "dagv2s") return "dagv2";
     if (bot == "dag" || bot == "dag4" || bot == "filter" || bot == "filter4") return "dag4";
     if (bot == "human") return "human";
     return "randombot";
@@ -358,7 +388,18 @@ BotResult choose_bot_move(const std::string& bot, double seconds_per_move) {
         return result;
     }
 
+    if (bot == "dagv2") {
+        ensure_v2_tt();
+        auto search = dag_v2::get_best_move_timed(env, seconds_per_move, 64, evaluator);
+        result.move = search.move;
+        result.completed_depth = search.completed_depth;
+        result.eval = search.eval;
+        result.status = search.timed_out ? "timed" : "ok";
+        return result;
+    }
+
     if (bot == "dag4") {
+        ensure_v1_tt();
         auto search = dag_search::get_best_move_timed(env, seconds_per_move, 64, evaluator);
         result.move = search.move;
         result.completed_depth = search.completed_depth;
@@ -386,7 +427,14 @@ std::string make_bot_json(const std::string& bot, const BotResult& result, doubl
 }
 
 std::string make_search_stats_json(const std::string& bot, int completed_depth, double elapsed_ms) {
-    dag_search::SearchStats stats = dag_search::get_last_stats();
+    dag_v1::SearchStats stats = dag_v1::get_last_stats();
+    if (bot == "dagv2") {
+        dag_v2::SearchStats v2 = dag_v2::get_last_stats();
+        stats = dag_v1::SearchStats{v2.nodes, v2.leaves, v2.terminal_hits, v2.tt_hits,
+                                    v2.tt_stores, v2.beta_cuts, v2.forced_wins,
+                                    v2.repetition_draws, v2.generated_moves,
+                                    v2.pruned_losing_moves, v2.table_entries};
+    }
     double elapsed_seconds = elapsed_ms / 1000.0;
     double nps = elapsed_seconds > 0.0 ? static_cast<double>(stats.nodes) / elapsed_seconds : 0.0;
     std::ostringstream out;
@@ -410,9 +458,14 @@ extern "C" {
 EMSCRIPTEN_KEEPALIVE
 void tg_init_engine(int tt_size_mb) {
     if (tt_size_mb < 4) tt_size_mb = 4;
-    if (tt_size_mb > 512) tt_size_mb = 512;
+    if (tt_size_mb > 1024) tt_size_mb = 1024;
     current_tt_mb = static_cast<size_t>(tt_size_mb);
-    dag_search::init_tt(current_tt_mb);
+    // Lazy allocation: free both TTs now; each engine re-allocates at the
+    // new size on its first search, so unused engines cost no memory.
+    dag_v1::global_tt.reset();
+    dag_v2::global_tt.reset();
+    v1_tt_mb = 0;
+    v2_tt_mb = 0;
 }
 
 EMSCRIPTEN_KEEPALIVE

@@ -1078,3 +1078,20 @@ textarea {
     font-size: 0.82rem;
   }
 }
+.engine-settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  align-items: end;
+}
+
+.engine-settings label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.device-info {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
