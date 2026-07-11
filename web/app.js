@@ -194,15 +194,18 @@ function pgnResult() {
   return "1/2-1/2";
 }
 
-function renderStoneField(count, blocked) {
+function renderStoneField(count, blocked, side) {
   if (blocked) return "";
-  // Traditional notation: fixed 2x5 grid of 10 positions.
-  // filled = one kumalak, stacked = two or more on that spot, empty = outline.
+  // 2×5 grid with staircase fill towards player's side.
+  // All 10 positions rendered; empty ones hidden via CSS.
   const filled = Math.min(count, 10);
   const stacked = Math.min(Math.max(count - 10, 0), 10);
   let html = "";
   for (let i = 0; i < 10; i++) {
-    const cls = i < stacked ? "stone stacked" : i < filled ? "stone filled" : "stone empty";
+    let cls = "stone";
+    if (i < stacked) cls += " stacked";
+    else if (i < filled) cls += " filled";
+    else cls += " empty";
     html += `<span class="${cls}"></span>`;
   }
   return html;
@@ -219,7 +222,7 @@ function renderPit(side, pit, count, displayNumber, blocked) {
   return `
     <button class="${classes}" type="button" data-side="${side}" data-pit="${pit}" ${canMove ? "" : "disabled"} aria-label="${label}">
       <span class="pit-label">${displayNumber}</span>
-      <span class="stone-field" aria-hidden="true">${renderStoneField(count, blocked)}</span>
+      <span class="stone-field" aria-hidden="true">${renderStoneField(count, blocked, side)}</span>
       <span class="pit-count">${blocked ? "" : count}</span>
     </button>
   `;

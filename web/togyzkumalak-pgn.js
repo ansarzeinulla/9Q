@@ -147,13 +147,17 @@ function parseMove(moveStr) {
 }
 
 // Render stone field (from app.js)
-function renderStoneField(count) {
-  // Traditional notation: fixed 2x5 grid of 10 positions.
+function renderStoneField(count, side) {
+  // 2×5 grid with staircase fill towards player's side.
+  // All 10 positions rendered; empty ones hidden via CSS.
   const filled = Math.min(count, 10);
   const stacked = Math.min(Math.max(count - 10, 0), 10);
   let html = "";
   for (let i = 0; i < 10; i++) {
-    const cls = i < stacked ? "stone stacked" : i < filled ? "stone filled" : "stone empty";
+    let cls = "stone";
+    if (i < stacked) cls += " stacked";
+    else if (i < filled) cls += " filled";
+    else cls += " empty";
     html += `<span class="${cls}"></span>`;
   }
   return html;
@@ -169,7 +173,7 @@ function renderPit(side, pit, count, displayNumber, blocked) {
   return `
     <div class="${classes}" data-side="${side}" data-pit="${pit}" aria-label="${label}">
       <span class="pit-label">${displayNumber}</span>
-      <span class="stone-field" aria-hidden="true">${renderStoneField(count, blocked)}</span>
+      <span class="stone-field" aria-hidden="true">${renderStoneField(count, side)}</span>
       <span class="pit-count">${blocked ? "" : count}</span>
     </div>
   `;
