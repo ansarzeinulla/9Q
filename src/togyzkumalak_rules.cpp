@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <iomanip>
 
+#include "togyz/console_render.hpp"
+#include "togyz/evaluation.hpp"
 #include "togyz/position_hash.hpp"
 
 // SOW_MASKS[start_pit][side][count]
@@ -397,82 +399,19 @@ int ToguzEnv::generate_moves_search(const Bitboard& b, const std::array<int, 2>&
   return count;
 }
 
-namespace {
-
-double terminal_eval(int winner_code, int perspective) {
-  if (winner_code == -1) return 0.0;
-  return winner_code == perspective ? 1000000.0 : -1000000.0;
-}
-
-double simple_tuzdyk_value(int pos) {
-  if (pos < 0 || pos >= 8) return 0.0;
-  return 650.0 + 70.0 * pos;
-}
-
-}  // namespace
-
 double ToguzEnv::evaluate(const Bitboard& b, const std::array<int, 2>& k,
                           const std::array<int, 2>& t, int perspective, int to_play_idx, int wc,
                           bool term) {
-  if (term) return terminal_eval(wc, perspective);
-
-  int opponent = 1 - perspective;
-  int my_stones = 0;
-  int opponent_stones = 0;
-  int my_legal_cells = 0;
-  int opponent_legal_cells = 0;
-  for (int i = 0; i < NUM_PITS; ++i) {
-    int my_cell = b.get(perspective * NUM_PITS + i);
-    int opponent_cell = b.get(opponent * NUM_PITS + i);
-    my_stones += my_cell;
-    opponent_stones += opponent_cell;
-    if (my_cell > 0 && t[opponent] != i) my_legal_cells++;
-    if (opponent_cell > 0 && t[perspective] != i) opponent_legal_cells++;
-  }
-
-  int total_on_board = my_stones + opponent_stones;
-  int total_captured = k[PLAYER_1] + k[PLAYER_2];
-
-  double kazan_weight = 108.0 + 0.28 * total_captured;
-  if (total_on_board < 30) kazan_weight += 18.0;
-
-  double score = (k[perspective] - k[opponent]) * kazan_weight;
-  score += simple_tuzdyk_value(t[perspective]) - simple_tuzdyk_value(t[opponent]);
-  score += (my_stones - opponent_stones) * (total_on_board < 24 ? 18.0 : 4.0);
-  score += (my_legal_cells - opponent_legal_cells) * 18.0;
-
-  if (t[perspective] != -1 && t[opponent] == -1) {
-    score += 170.0;
-  } else if (t[perspective] == -1 && t[opponent] != -1) {
-    score -= 170.0;
-  }
-  score += (to_play_idx == perspective) ? 10.0 : -10.0;
-  return score;
+  static const HeuristicEvaluator kDefault;
+  BoardState state{b, k, t, to_play_idx, wc, perspective, term};
+  return kDefault.evaluate_position(state);
 }
 
+// Deprecated: use togyz_render::render_console.
 void ToguzEnv::render(const std::string& mode, const std::string& p1_name,
                       const std::string& p2_name) const {
   if (mode != "terminal") return;
-  std::cout << "Kazan: " << p1_name << "=" << kazans[0] << " " << p2_name << "=" << kazans[1]
-            << "\n";
-
-  // P2 pits: 17...9 (side2 indices 8...0)
-  for (int i = 8; i >= 0; --i) {
-    if (tuzduks[0] == i)
-      std::cout << "[ X]";
-    else
-      std::cout << "[" << std::setw(2) << board.get(i + 9) << "]";
-  }
-  std::cout << "\n";
-
-  // P1 pits: 0...8 (side1 indices 0...8)
-  for (int i = 0; i < 9; ++i) {
-    if (tuzduks[1] == i)
-      std::cout << "[ X]";
-    else
-      std::cout << "[" << std::setw(2) << board.get(i) << "]";
-  }
-  std::cout << "\n";
+  togyz_render::render_console(std::cout, *this, p1_name, p2_name);
 }
 
 int ToguzEnv::setup_random_position(int plies) {

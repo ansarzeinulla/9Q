@@ -38,6 +38,7 @@ add_library(togyz_core STATIC
     src/minimax_engine.cpp
     src/dag_v1_search.cpp
     src/evaluation.cpp
+    src/console_render.cpp
 )
 target_include_directories(togyz_core PUBLIC include)
 
@@ -91,5 +92,9 @@ if(NOT EMSCRIPTEN)
     add_executable(test_evaluation tests/test_evaluation.cpp)
     target_link_libraries(test_evaluation PRIVATE togyz_core gtest_main)
     add_test(NAME test_evaluation COMMAND test_evaluation)
+
+    add_executable(test_eval_params tests/test_eval_params.cpp)
+    target_link_libraries(test_eval_params PRIVATE togyz_core gtest_main)
+    add_test(NAME test_eval_params COMMAND test_eval_params)
 endif()
 
