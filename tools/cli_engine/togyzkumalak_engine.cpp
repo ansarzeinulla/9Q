@@ -293,6 +293,20 @@ PlayerConfig parse_controller(const string& str) {
     } else {
       pc.depth = 3;  // default depth
     }
+  } else if (str.length() >= 5 && str.substr(0, 5) == "dagv2") {
+    pc.kind = "dagv2";
+    if (str.length() > 5) {
+      pc.depth = stoi(str.substr(5));
+    } else {
+      pc.depth = 3;
+    }
+  } else if (str.length() >= 5 && str.substr(0, 5) == "dagv1") {
+    pc.kind = "dag";
+    if (str.length() > 5) {
+      pc.depth = stoi(str.substr(5));
+    } else {
+      pc.depth = 3;
+    }
   } else if (str.length() >= 3 && str.substr(0, 3) == "dag") {
     pc.kind = "dag";
     if (str.length() > 3) {

@@ -36,7 +36,7 @@ add_library(togyz_core STATIC
     src/togyzkumalak_rules.cpp
     src/position_hash.cpp
     src/minimax_engine.cpp
-    src/dag_search.cpp
+    src/dag_v1_search.cpp
     src/evaluation.cpp
 )
 target_include_directories(togyz_core PUBLIC include)

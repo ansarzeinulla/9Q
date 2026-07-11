@@ -1,4 +1,4 @@
-#include "togyz/dag_search.hpp"
+#include "togyz/dag_v1_search.hpp"
 
 #include <algorithm>
 #include <array>
@@ -10,7 +10,7 @@
 
 #include "togyz/position_hash.hpp"
 
-namespace dag_search {
+namespace dag_v1 {
 
 namespace {
 
@@ -422,7 +422,7 @@ class DagSearcher {
   }
 };
 
-SearchStats last_stats;
+thread_local SearchStats last_stats;
 
 MoveEval search_root(const ToguzEnv& env, int depth, const Evaluator& evaluator,
                      const Clock::time_point* deadline = nullptr, bool* timed_out = nullptr) {
@@ -629,4 +629,4 @@ std::vector<MoveEval> get_all_moves_with_evals(const ToguzEnv& env, int depth,
 
 SearchStats get_last_stats() { return last_stats; }
 
-}  // namespace dag_search
+}  // namespace dag_v1

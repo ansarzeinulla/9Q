@@ -1,0 +1,13 @@
+=== Fixed-depth bot comparison ===
+Minimax bot: ai5  DAG bot: dag5
+Positions: 20 balanced reduced starts, seed=1337
+Evaluators: P1=heuristic  P2=heuristic
+Randomization: each side subtracts 1..3 per selected pit with equal total removed per side.
+
+=== Comparison Results ===
+Games: 40 (20 positions x 2 color orders)
+DAG wins: 23  minimax wins: 14  draws: 3
+DAG win%: 57.5  minimax win%: 35.0  draw%: 7.5
+First-move agreement: 20/20 (100.0%)
+Average equal reduction per side: 8.0
+Average DAG margin per game: 7.3
