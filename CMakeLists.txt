@@ -37,6 +37,7 @@ add_library(togyz_core STATIC
     src/position_hash.cpp
     src/minimax_engine.cpp
     src/dag_v1_search.cpp
+    src/dag_v2_search.cpp
     src/evaluation.cpp
     src/console_render.cpp
 )
@@ -96,5 +97,17 @@ if(NOT EMSCRIPTEN)
     add_executable(test_eval_params tests/test_eval_params.cpp)
     target_link_libraries(test_eval_params PRIVATE togyz_core gtest_main)
     add_test(NAME test_eval_params COMMAND test_eval_params)
+
+    add_executable(test_dag_v2_tables tests/test_dag_v2_tables.cpp)
+    target_link_libraries(test_dag_v2_tables PRIVATE togyz_core gtest_main)
+    add_test(NAME test_dag_v2_tables COMMAND test_dag_v2_tables)
+
+    add_executable(test_dag_v2_aspiration tests/test_dag_v2_aspiration.cpp)
+    target_link_libraries(test_dag_v2_aspiration PRIVATE togyz_core gtest_main)
+    add_test(NAME test_dag_v2_aspiration COMMAND test_dag_v2_aspiration)
+
+    add_executable(test_dag_v2_equivalence tests/test_dag_v2_equivalence.cpp)
+    target_link_libraries(test_dag_v2_equivalence PRIVATE togyz_core gtest_main)
+    add_test(NAME test_dag_v2_equivalence COMMAND test_dag_v2_equivalence)
 endif()
 
