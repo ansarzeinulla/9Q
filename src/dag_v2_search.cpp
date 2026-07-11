@@ -192,8 +192,7 @@ class DagSearcher {
     }
 
     order_moves(moves, count, board, tuzduks, to_play, tt_best_move,
-                opts.use_killers ? &killers : nullptr, ply,
-                opts.use_history ? &history : nullptr);
+                opts.use_killers ? &killers : nullptr, ply, opts.use_history ? &history : nullptr);
 
     Bitboard board_backup = board;
     auto kazans_backup = kazans;
@@ -577,11 +576,10 @@ TimedMoveResult search_iterative(const ToguzEnv& env, int max_depth, const Evalu
   for (int depth = 1; depth <= max_depth; ++depth) {
     searcher.reset_iteration_stats();
 
-    AspirationWindow window =
-        (opts.use_aspiration && have_prev && depth >= 2 &&
-         !AspirationWindow::is_mate_bound(prev_score))
-            ? AspirationWindow::initial(prev_score)
-            : AspirationWindow::full();
+    AspirationWindow window = (opts.use_aspiration && have_prev && depth >= 2 &&
+                               !AspirationWindow::is_mate_bound(prev_score))
+                                  ? AspirationWindow::initial(prev_score)
+                                  : AspirationWindow::full();
 
     MoveEval current;
     while (true) {
@@ -642,8 +640,8 @@ int get_best_move(const ToguzEnv& env, int depth, const Evaluator& evaluator,
     // no iterative deepening (the equivalence tests pin this).
     bool* no_timeout = nullptr;
     DagSearcher searcher(DEFAULT_TT_MB, env.history_stack, evaluator, options);
-    MoveEval result = search_root(searcher, env, depth, evaluator, -SEARCH_INF, SEARCH_INF, 0,
-                                  no_timeout);
+    MoveEval result =
+        search_root(searcher, env, depth, evaluator, -SEARCH_INF, SEARCH_INF, 0, no_timeout);
     last_stats = searcher.stats;
     return result.move;
   }
@@ -695,8 +693,7 @@ std::vector<MoveEval> get_all_moves_with_evals(const ToguzEnv& env, int depth,
 
   sort_moves(board, tuzduks, env.to_play, moves, count);
 
-  DagSearcher searcher(DEFAULT_TT_MB, env.history_stack, evaluator,
-                       SearchOptions::v1_baseline());
+  DagSearcher searcher(DEFAULT_TT_MB, env.history_stack, evaluator, SearchOptions::v1_baseline());
   std::vector<MoveEval> results;
   results.reserve(static_cast<size_t>(count));
 

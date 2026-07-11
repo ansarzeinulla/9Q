@@ -22,11 +22,10 @@ TEST(EvalParams, DefaultParamsMatchLegacyEvaluate) {
     }
     for (int perspective = 0; perspective < 2; ++perspective) {
       for (int to_play = 0; to_play < 2; ++to_play) {
-        double legacy = ToguzEnv::evaluate(env.board, env.kazans, env.tuzduks, perspective,
-                                           to_play, env.winner_code, env.is_game_over());
-        BoardState st{env.board, env.kazans, env.tuzduks,
-                      to_play,   env.winner_code, perspective,
-                      env.is_game_over()};
+        double legacy = ToguzEnv::evaluate(env.board, env.kazans, env.tuzduks, perspective, to_play,
+                                           env.winner_code, env.is_game_over());
+        BoardState st{env.board,       env.kazans,  env.tuzduks,       to_play,
+                      env.winner_code, perspective, env.is_game_over()};
         EXPECT_DOUBLE_EQ(legacy, eval.evaluate_position(st));
         ++checked;
       }

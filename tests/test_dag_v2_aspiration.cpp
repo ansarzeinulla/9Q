@@ -36,9 +36,7 @@ TEST(AspirationWindow, RepeatedFailsEscalateToFullWindow) {
   EXPECT_TRUE(w.is_full());
 }
 
-TEST(AspirationWindow, FullWindowIsFull) {
-  EXPECT_TRUE(AspirationWindow::full().is_full());
-}
+TEST(AspirationWindow, FullWindowIsFull) { EXPECT_TRUE(AspirationWindow::full().is_full()); }
 
 TEST(AspirationWindow, MateBoundScoresSkipAspiration) {
   // TT clamps stored scores to int16, so anything at/above that band is

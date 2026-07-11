@@ -210,9 +210,7 @@ struct AspirationWindow {
     return w;
   }
 
-  static bool is_mate_bound(double score) {
-    return score >= MATE_BOUND || score <= -MATE_BOUND;
-  }
+  static bool is_mate_bound(double score) { return score >= MATE_BOUND || score <= -MATE_BOUND; }
 };
 
 int get_best_move(const ToguzEnv& env, int depth = 3);
