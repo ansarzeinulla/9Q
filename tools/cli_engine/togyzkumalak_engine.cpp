@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "togyz/dag_search.hpp"
+#include "togyz/dag_v2_search.hpp"
 #include "togyz/evaluation.hpp"
 #include "togyz/minimax_engine.hpp"
 #include "togyz/position_hash.hpp"
@@ -56,6 +57,11 @@ struct Args {
   bool uci = false;
   bool compare = false;
   bool benchmark = false;
+  bool arena = false;
+  string p1_bot = "dagv1";
+  string p2_bot = "dagv2";
+  int fixed_depth = -1;  // > 0 switches the arena to fixed-depth mode
+  string report_file = "";
 };
 
 Args parse_args(int argc, char* argv[]) {
@@ -108,6 +114,16 @@ Args parse_args(int argc, char* argv[]) {
       args.compare = true;
     } else if (arg == "--benchmark" || arg == "--bench" || arg == "--time-bots") {
       args.benchmark = true;
+    } else if (arg == "--arena") {
+      args.arena = true;
+    } else if (arg == "--p1bot" && i + 1 < argc) {
+      args.p1_bot = argv[++i];
+    } else if (arg == "--p2bot" && i + 1 < argc) {
+      args.p2_bot = argv[++i];
+    } else if (arg == "--fixed-depth" && i + 1 < argc) {
+      args.fixed_depth = stoi(argv[++i]);
+    } else if (arg == "--report-file" && i + 1 < argc) {
+      args.report_file = argv[++i];
     }
   }
   return args;
@@ -242,12 +258,19 @@ TimedBotResult timed_bot_move(ToguzEnv& env, const string& kind, double move_tim
     result.completed_depth = search.completed_depth;
     result.eval = search.eval;
     return result;
-  } else if (kind == "dag") {
+  } else if (kind == "dag" || kind == "dagv1") {
     auto search = dag_search::get_best_move_timed(env, move_time_seconds, max_depth, evaluator);
     result.move = search.move;
     result.completed_depth = search.completed_depth;
     result.eval = search.eval;
     result.nodes = dag_search::get_last_stats().nodes;
+    return result;
+  } else if (kind == "dagv2") {
+    auto search = dag_v2::get_best_move_timed(env, move_time_seconds, max_depth, evaluator);
+    result.move = search.move;
+    result.completed_depth = search.completed_depth;
+    result.eval = search.eval;
+    result.nodes = dag_v2::get_last_stats().nodes;
     return result;
   } else {
     throw runtime_error("Unsupported bot kind: " + kind);
@@ -663,6 +686,246 @@ vector<StartPosition> make_balanced_start_positions(const Args& args) {
     starts.push_back(capture_start_position(env, reduction));
   }
   return starts;
+}
+
+// ---------------------------------------------------------------------------
+// Engine arena: head-to-head matches between two named bots over N random
+// balanced positions, each played twice with colors swapped (2N games).
+// Fixed-depth mode when --fixed-depth > 0, otherwise timed (--move-time).
+// ---------------------------------------------------------------------------
+
+string normalize_arena_bot(const string& name) {
+  if (name == "dag" || name == "dagv1" || name == "filter") return "dagv1";
+  if (name == "dagv2") return "dagv2";
+  if (name == "ai" || name == "minimax") return "ai";
+  throw runtime_error("Unsupported arena bot: " + name);
+}
+
+struct ArenaMoveResult {
+  int move = -1;
+  uint64_t nodes = 0;
+  int completed_depth = 0;
+};
+
+ArenaMoveResult arena_bot_move(const ToguzEnv& env, const string& kind, const Args& args,
+                               const Evaluator& evaluator) {
+  ArenaMoveResult r;
+  if (args.fixed_depth > 0) {
+    r.completed_depth = args.fixed_depth;
+    if (kind == "ai") {
+      r.move = minimax_engine::get_best_move(env, args.fixed_depth, evaluator);
+    } else if (kind == "dagv1") {
+      r.move = dag_v1::get_best_move(env, args.fixed_depth, evaluator);
+      r.nodes = dag_v1::get_last_stats().nodes;
+    } else if (kind == "dagv2") {
+      r.move = dag_v2::get_best_move(env, args.fixed_depth, evaluator);
+      r.nodes = dag_v2::get_last_stats().nodes;
+    }
+  } else {
+    if (kind == "ai") {
+      auto s = minimax_engine::get_best_move_timed(env, args.move_time_seconds,
+                                                   args.max_search_depth, evaluator);
+      r.move = s.move;
+      r.completed_depth = s.completed_depth;
+    } else if (kind == "dagv1") {
+      auto s = dag_v1::get_best_move_timed(env, args.move_time_seconds, args.max_search_depth,
+                                           evaluator);
+      r.move = s.move;
+      r.completed_depth = s.completed_depth;
+      r.nodes = dag_v1::get_last_stats().nodes;
+    } else if (kind == "dagv2") {
+      auto s = dag_v2::get_best_move_timed(env, args.move_time_seconds, args.max_search_depth,
+                                           evaluator);
+      r.move = s.move;
+      r.completed_depth = s.completed_depth;
+      r.nodes = dag_v2::get_last_stats().nodes;
+    }
+  }
+  return r;
+}
+
+struct ArenaGameResult {
+  int winner_bot = -1;  // 0 = p1_bot, 1 = p2_bot, -1 = draw
+  bool p1bot_moved_first = true;
+  int plies = 0;
+  array<uint64_t, 2> bot_nodes{0, 0};   // indexed by bot (0 = p1_bot, 1 = p2_bot)
+  array<uint64_t, 2> bot_moves{0, 0};
+  array<uint64_t, 2> bot_depth_sum{0, 0};
+};
+
+struct ArenaTotals {
+  long long games = 0;
+  array<long long, 2> wins{0, 0};
+  long long draws = 0;
+  // wins split by whether the bot moved first in the game
+  array<long long, 2> wins_as_first{0, 0};
+  array<long long, 2> wins_as_second{0, 0};
+  array<long long, 2> games_as_first{0, 0};
+  long long total_plies = 0;
+  array<uint64_t, 2> bot_nodes{0, 0};
+  array<uint64_t, 2> bot_moves{0, 0};
+  array<uint64_t, 2> bot_depth_sum{0, 0};
+};
+
+ArenaGameResult play_arena_game(const StartPosition& start, bool p1bot_moves_first,
+                                const Args& args, const Evaluator& evaluator) {
+  ArenaGameResult result;
+  result.p1bot_moved_first = p1bot_moves_first;
+
+  ToguzEnv env;
+  apply_start_position(env, start);
+
+  string p1_kind = normalize_arena_bot(args.p1_bot);
+  string p2_kind = normalize_arena_bot(args.p2_bot);
+  // bots_by_seat[seat] = bot index (0 = p1_bot, 1 = p2_bot)
+  array<int, 2> bot_by_seat = p1bot_moves_first ? array<int, 2>{0, 1} : array<int, 2>{1, 0};
+  array<string, 2> kind_by_bot = {p1_kind, p2_kind};
+
+  while (!env.is_game_over()) {
+    int bot = bot_by_seat[env.to_play];
+    ArenaMoveResult mv = arena_bot_move(env, kind_by_bot[bot], args, evaluator);
+    if (mv.move < 0) break;
+    result.bot_nodes[bot] += mv.nodes;
+    result.bot_moves[bot] += 1;
+    result.bot_depth_sum[bot] += static_cast<uint64_t>(mv.completed_depth);
+    env.step(mv.move);
+    result.plies++;
+  }
+
+  if (env.winner_code == 0 || env.winner_code == 1) {
+    result.winner_bot = bot_by_seat[env.winner_code];
+  } else {
+    result.winner_bot = -1;
+  }
+  return result;
+}
+
+void write_arena_report(ostream& out, const Args& args, const ArenaTotals& t, double wall_seconds) {
+  auto pct = [&](long long v) {
+    return t.games > 0 ? 100.0 * static_cast<double>(v) / static_cast<double>(t.games) : 0.0;
+  };
+  const array<string, 2> names = {args.p1_bot, args.p2_bot};
+  out << "=== Engine Arena Report ===\n";
+  out << "Bots: " << names[0] << " vs " << names[1] << "\n";
+  if (args.fixed_depth > 0) {
+    out << "Mode: fixed depth " << args.fixed_depth << "\n";
+  } else {
+    out << "Mode: timed, " << args.move_time_seconds << " s/move (max depth "
+        << args.max_search_depth << ")\n";
+  }
+  out << "Positions: " << args.positions << " balanced reduced starts, seed=" << args.seed
+      << ", each played twice with colors swapped\n";
+  out << "Threads: " << args.threads << "\n\n";
+
+  out << fixed << setprecision(1);
+  out << "Games: " << t.games << "\n";
+  for (int b = 0; b < 2; ++b) {
+    out << names[b] << " wins: " << t.wins[b] << " (" << pct(t.wins[b]) << "%)\n";
+  }
+  out << "Draws: " << t.draws << " (" << pct(t.draws) << "%)\n\n";
+
+  out << "Color breakdown (moving first vs second):\n";
+  for (int b = 0; b < 2; ++b) {
+    long long gf = t.games_as_first[b];
+    long long gs = t.games - gf;
+    out << "  " << names[b] << " as first: " << t.wins_as_first[b] << "/" << gf
+        << " wins;  as second: " << t.wins_as_second[b] << "/" << gs << " wins\n";
+  }
+  out << "\nAverage plies per game: "
+      << (t.games > 0 ? static_cast<double>(t.total_plies) / static_cast<double>(t.games) : 0.0)
+      << "\n";
+  out << setprecision(2);
+  for (int b = 0; b < 2; ++b) {
+    double avg_depth = t.bot_moves[b] > 0 ? static_cast<double>(t.bot_depth_sum[b]) /
+                                                static_cast<double>(t.bot_moves[b])
+                                          : 0.0;
+    double avg_nodes = t.bot_moves[b] > 0 ? static_cast<double>(t.bot_nodes[b]) /
+                                                static_cast<double>(t.bot_moves[b])
+                                          : 0.0;
+    out << names[b] << ": avg completed depth " << avg_depth << ", avg nodes/move "
+        << static_cast<long long>(avg_nodes) << "\n";
+  }
+  out << setprecision(1) << "Wall time: " << wall_seconds << " s\n";
+}
+
+void run_engine_arena(const Args& args) {
+  auto wall_start = chrono::steady_clock::now();
+  vector<StartPosition> starts = make_balanced_start_positions(args);
+
+  struct Task {
+    int start_idx;
+    bool p1bot_first;
+  };
+  vector<Task> tasks;
+  tasks.reserve(starts.size() * 2);
+  for (size_t i = 0; i < starts.size(); ++i) {
+    tasks.push_back(Task{static_cast<int>(i), true});
+    tasks.push_back(Task{static_cast<int>(i), false});
+  }
+
+  vector<ArenaGameResult> results(tasks.size());
+  atomic<size_t> next_task{0};
+  atomic<size_t> done_count{0};
+  mutex progress_mutex;
+
+  int thread_count = max(1, args.threads);
+  vector<thread> workers;
+  workers.reserve(static_cast<size_t>(thread_count));
+  for (int w = 0; w < thread_count; ++w) {
+    workers.emplace_back([&]() {
+      const HeuristicEvaluator evaluator;
+      while (true) {
+        size_t idx = next_task.fetch_add(1);
+        if (idx >= tasks.size()) break;
+        const Task& task = tasks[idx];
+        results[idx] = play_arena_game(starts[static_cast<size_t>(task.start_idx)],
+                                       task.p1bot_first, args, evaluator);
+        size_t done = done_count.fetch_add(1) + 1;
+        if (done % 20 == 0 || done == tasks.size()) {
+          lock_guard<mutex> lock(progress_mutex);
+          cout << "Arena progress: " << done << "/" << tasks.size() << " games\r" << flush;
+        }
+      }
+    });
+  }
+  for (auto& worker : workers) worker.join();
+  cout << "\n";
+
+  ArenaTotals totals;
+  for (const auto& r : results) {
+    totals.games++;
+    totals.total_plies += r.plies;
+    int first_bot = r.p1bot_moved_first ? 0 : 1;
+    totals.games_as_first[first_bot]++;
+    if (r.winner_bot >= 0) {
+      totals.wins[r.winner_bot]++;
+      if ((r.winner_bot == 0) == r.p1bot_moved_first) {
+        totals.wins_as_first[r.winner_bot]++;
+      } else {
+        totals.wins_as_second[r.winner_bot]++;
+      }
+    } else {
+      totals.draws++;
+    }
+    for (int b = 0; b < 2; ++b) {
+      totals.bot_nodes[b] += r.bot_nodes[b];
+      totals.bot_moves[b] += r.bot_moves[b];
+      totals.bot_depth_sum[b] += r.bot_depth_sum[b];
+    }
+  }
+
+  double wall_seconds =
+      chrono::duration<double>(chrono::steady_clock::now() - wall_start).count();
+  write_arena_report(cout, args, totals, wall_seconds);
+  if (!args.report_file.empty()) {
+    ofstream file(args.report_file, ios::trunc);
+    if (!file) {
+      cerr << "Could not open report file: " << args.report_file << "\n";
+    } else {
+      write_arena_report(file, args, totals, wall_seconds);
+      cout << "Report written to " << args.report_file << "\n";
+    }
+  }
 }
 
 string board_snapshot(const ToguzEnv& env, int ply, int mover, int move) {
@@ -1110,6 +1373,11 @@ int main(int argc, char* argv[]) {
 
   if (args.benchmark) {
     run_selfplay_benchmark(args);
+    return 0;
+  }
+
+  if (args.arena) {
+    run_engine_arena(args);
     return 0;
   }
 
