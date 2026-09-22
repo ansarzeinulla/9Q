@@ -27,6 +27,22 @@ if (self.crypto && typeof self.crypto.getRandomValues === "function") {
     }
   };
 }
+
+// ============================================================================
+// CHROME RESIZABLE ARRAYBUFFER WORKAROUND POLYFILL (TextDecoder)
+// Same Chrome change as above: TextDecoder.decode() rejects views into
+// resizable WebAssembly memory, which breaks Module.UTF8ToString() and every
+// engine request ("Engine request failed"). Copy such views before decoding.
+// ============================================================================
+if (typeof TextDecoder !== "undefined") {
+  const originalDecode = TextDecoder.prototype.decode;
+  TextDecoder.prototype.decode = function (input, options) {
+    if (input && input.buffer && input.buffer.resizable) {
+      input = input.slice();
+    }
+    return originalDecode.call(this, input, options);
+  };
+}
 // ============================================================================
 
 let modulePromise = null;
