@@ -65,6 +65,10 @@ if(NOT EMSCRIPTEN)
     add_executable(tg_bench_search tools/bench_search/bench_search.cpp)
     target_link_libraries(tg_bench_search PRIVATE togyz_core)
 
+    # Fixed-Depth Tournament (playing-strength table in the paper: Table 6)
+    add_executable(tg_tournament tools/tournament/tournament.cpp)
+    target_link_libraries(tg_tournament PRIVATE togyz_core)
+
     # Coverage Option
     option(ENABLE_COVERAGE "Enable coverage instrumentation" OFF)
     if(ENABLE_COVERAGE)
