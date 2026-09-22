@@ -32,7 +32,7 @@ def parse_stats(file_path):
     return stats
 
 def plot_branching_and_decay(stats):
-    """Reproduces Figure 1 & Figure 2 using real C++ simulation counters."""
+    """Reproduces Figure 1 (first 120 half-moves) using real C++ simulation counters."""
     print("Generating Branching Factor and Board-Material Decay plots...")
     
     total_games = stats.get('featureTrackedGames', 1000000000)
@@ -99,6 +99,64 @@ def plot_branching_and_decay(stats):
     print("Saved output/Figure_1_Branching_Factor.png")
     plt.close()
 
+def plot_branching_tail(stats):
+    """Reproduces Figure 2: binned branching factor after half-move 120.
+
+    Bins get wider as fewer games survive (10, 20, 50, 100 half-moves, then one
+    final bin to the longest game), matching the paper. Per bin: average legal
+    moves = sum of legal moves / number of positions, and the number of
+    pre-move positions observed in the bin (log scale).
+    """
+    print("Generating Branching Factor tail plot...")
+
+    positions = {}
+    legal_sums = {}
+    for key, val in stats.items():
+        m = re.match(r'^branchingExactMovePositions(\d+)$', key)
+        if m:
+            positions[int(m.group(1)) - 1] = val  # 0-indexed half-move, as in Figure 1
+        m = re.match(r'^branchingExactMoveLegalMoveSum(\d+)$', key)
+        if m:
+            legal_sums[int(m.group(1)) - 1] = val
+
+    last = max(positions)
+    edges = (list(range(120, 200, 10)) + list(range(200, 300, 20)) +
+             list(range(300, 500, 50)) + [500, 600, 700, last])
+
+    centers, avg_legal, bin_positions = [], [], []
+    for lo, hi in zip(edges[:-1], edges[1:]):
+        idx = [h for h in range(lo + 1, hi + 1) if positions.get(h, 0) > 0]
+        n = sum(positions[h] for h in idx)
+        if n == 0:
+            continue
+        centers.append((lo + hi) / 2.0)
+        avg_legal.append(sum(legal_sums.get(h, 0) for h in idx) / n)
+        bin_positions.append(n)
+
+    fig, ax1 = plt.subplots(figsize=(10, 5))
+    ax1.plot(centers, avg_legal, color='tab:blue', marker='o', linewidth=2,
+             label='Binned average legal moves')
+    ax1.set_xlabel('Half-move index before next move')
+    ax1.set_ylabel('Average branching factor')
+    ax1.set_ylim(1, max(avg_legal) + 0.5)
+    ax1.grid(alpha=0.3)
+
+    ax2 = ax1.twinx()
+    ax2.plot(centers, bin_positions, color='tab:red', linestyle='--',
+             label='Surviving pre-move positions')
+    ax2.set_yscale('log')
+    ax2.set_ylabel('Positions in bin (log scale)')
+
+    lines = ax1.get_lines() + ax2.get_lines()
+    ax1.legend(lines, [l.get_label() for l in lines], loc='upper right')
+    plt.title("Binned Branching-Factor Tail (after Half-Move 120)")
+    fig.tight_layout()
+
+    os.makedirs("output", exist_ok=True)
+    plt.savefig("output/Figure_2_Branching_Tail.png", dpi=300)
+    print("Saved output/Figure_2_Branching_Tail.png")
+    plt.close()
+
 def plot_opening_heatmap(stats):
     """Reproduces Figure 3 opening outcomes heatmap using real game outcomes."""
     print("Generating Opening Heatmap...")
@@ -144,6 +202,7 @@ if __name__ == "__main__":
     try:
         stats = parse_stats(stats_file)
         plot_branching_and_decay(stats)
+        plot_branching_tail(stats)
         plot_opening_heatmap(stats)
         print("Done! All figures successfully generated in the research/output/ directory.")
     except Exception as e:
