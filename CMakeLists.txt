@@ -61,6 +61,10 @@ if(NOT EMSCRIPTEN)
     add_executable(perft_test tests/perft.cpp)
     target_link_libraries(perft_test PRIVATE togyz_core)
 
+    # Search Benchmark (speed numbers in the paper: Table 8, Sec. 9.2)
+    add_executable(tg_bench_search tools/bench_search/bench_search.cpp)
+    target_link_libraries(tg_bench_search PRIVATE togyz_core)
+
     # Coverage Option
     option(ENABLE_COVERAGE "Enable coverage instrumentation" OFF)
     if(ENABLE_COVERAGE)

@@ -72,6 +72,7 @@ void sort_moves(const Bitboard& board, const std::array<int, 2>& tuzduks, int pl
 
 void order_moves(std::array<int, 9>& moves, int count, const Bitboard& board,
                  const std::array<int, 2>& tuzduks, int player, uint16_t tt_best_move) {
+  if (!g_move_ordering) return;  // benchmark only: keep generation order
   std::array<ScoredMove, 9> scored_moves{};
   for (int i = 0; i < count; ++i) {
     int move = moves[i];

@@ -40,6 +40,12 @@ inline void init_tt(size_t size_in_mb) {
   global_tt = std::make_unique<TranspositionTable>(size_in_mb);
 }
 
+// Benchmark switch. When false, move ordering is skipped and moves are searched
+// in generation order (no TT best move first, no capture priority). The default
+// (true) is the normal engine; tools/bench_search flips it only to reproduce the
+// "with vs without move ordering" node counts reported in the paper (Sec. 9.2).
+inline thread_local bool g_move_ordering = true;
+
 class TranspositionTable {
  private:
   std::vector<TTEntry> table;
