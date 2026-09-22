@@ -1,17 +1,30 @@
 cff-version: 1.2.0
-message: "If you use this software, the Togyzkumalak engine, or the 1-Billion Game Dataset in your research, please cite it as below."
+message: "If you use this engine, the complexity bounds, or the aggregate statistics of the 10^9-game run, please cite the paper below."
+type: software
+title: "9Q: Togyzkumalak engine, billion-game simulator and complexity analysis"
 authors:
   - family-names: "Zeinulla"
     given-names: "Ansar"
-title: "Combinatorial State-Space and Empirical Game Tree Complexity of Togyzkumalak: A Billion-Game Analysis"
-version: 1.1.0
-date-released: 2026-07-02
-url: "https://github.com/ansarzeinulla/9Q"
+    affiliation: "Nazarbayev University"
+    email: "ansar.zeinulla@nu.edu.kz"
+version: 1.2.0
+date-released: 2026-09-22
+license: MIT
+repository-code: "https://github.com/ansarzeinulla/9Q"
+url: "https://9qumalaq.vercel.app/"
+keywords:
+  - Togyzkumalak
+  - mancala
+  - game complexity
+  - alpha-beta search
+  - WebAssembly
 preferred-citation:
   type: article
   authors:
     - family-names: "Zeinulla"
       given-names: "Ansar"
+      affiliation: "Nazarbayev University"
   title: "Combinatorial State-Space and Empirical Game Tree Complexity of Togyzkumalak: A Billion-Game Analysis"
-  journal: "arXiv preprint arXiv:XXXX.XXXXX" # Update when you have the ArXiv ID
+  journal: "ICGA Journal"
+  status: submitted
   year: 2026
