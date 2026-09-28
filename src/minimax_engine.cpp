@@ -24,6 +24,10 @@ using Clock = std::chrono::steady_clock;
 #endif
 
 const int TT_SIZE = 1 << MINIMAX_TT_BITS;  // Native default: 16.7M entries.
+// Alpha-beta returns an exact value only when it stays inside the search window;
+// outside it the value is a bound, so the kind of bound must be stored with it.
+enum : uint8_t { TT_EXACT = 1, TT_LOWER = 2, TT_UPPER = 3 };
+
 struct TTEntry {
   uint64_t hash = 0;
   uint64_t evaluator_key = 0;
@@ -31,14 +35,43 @@ struct TTEntry {
   int depth = -1;
   int perspective = -1;
   uint8_t best_move = 0;
+  uint8_t flag = 0;
 };
+
+// Which bound a completed node produced, relative to the window it was searched with.
+static uint8_t bound_flag(double value, double alpha_orig, double beta_orig) {
+  if (value <= alpha_orig) return TT_UPPER;
+  if (value >= beta_orig) return TT_LOWER;
+  return TT_EXACT;
+}
 
 struct ScoredMove {
   int move = -1;
   int score = 0;
 };
 
-static std::vector<TTEntry>& transposition_table() {
+static bool& tt_enabled_flag() {
+  static bool enabled = true;
+  return enabled;
+}
+
+static bool& tt_bound_check_flag() {
+  static bool check = true;
+  return check;
+}
+
+static std::vector<TTEntry>& transposition_table_storage();
+
+static std::vector<TTEntry>& transposition_table() { return transposition_table_storage(); }
+
+void clear_transposition_table() {
+  std::fill(transposition_table_storage().begin(), transposition_table_storage().end(), TTEntry{});
+}
+
+void set_tt_enabled(bool enabled) { tt_enabled_flag() = enabled; }
+void set_tt_bound_check(bool check) { tt_bound_check_flag() = check; }
+
+static std::vector<TTEntry>& transposition_table_storage() {
   static std::vector<TTEntry> table(TT_SIZE);
   return table;
 }
@@ -216,14 +249,21 @@ double minimax_raw(Bitboard& board, std::array<int, 2>& kazans, std::array<int, 
   }
 
   // TT Probe
+  const double alpha_orig = alpha, beta_orig = beta;
   uint64_t evaluator_key = evaluator.cache_key();
   int tt_idx = current_hash & (TT_SIZE - 1);
   auto& tt = transposition_table();
   uint8_t tt_best_move = 0;
-  if (tt[tt_idx].hash == current_hash && tt[tt_idx].evaluator_key == evaluator_key &&
-      tt[tt_idx].perspective == perspective_player && tt[tt_idx].depth >= depth) {
+  if (tt_enabled_flag() && tt[tt_idx].hash == current_hash &&
+      tt[tt_idx].evaluator_key == evaluator_key && tt[tt_idx].perspective == perspective_player &&
+      tt[tt_idx].depth >= depth) {
     tt_best_move = tt[tt_idx].best_move;
-    return tt[tt_idx].value;
+    const double stored = tt[tt_idx].value;
+    const uint8_t flag = tt[tt_idx].flag;
+    if (!tt_bound_check_flag() || flag == TT_EXACT) return stored;
+    if (flag == TT_LOWER && stored >= beta) return stored;
+    if (flag == TT_UPPER && stored <= alpha) return stored;
+    // otherwise the entry is only good enough to order moves
   }
 
   if (depth == 0) {
@@ -272,8 +312,13 @@ double minimax_raw(Bitboard& board, std::array<int, 2>& kazans, std::array<int, 
       if (value > alpha) alpha = value;
       if (beta <= alpha) break;
     }
-    tt[tt_idx] = {current_hash, evaluator_key,      value,
-                  depth,        perspective_player, static_cast<uint8_t>(node_best_move)};
+    tt[tt_idx] = {current_hash,
+                  evaluator_key,
+                  value,
+                  depth,
+                  perspective_player,
+                  static_cast<uint8_t>(node_best_move),
+                  bound_flag(value, alpha_orig, beta_orig)};
     return value;
   } else {
     double value = 10000000.0;
@@ -300,8 +345,13 @@ double minimax_raw(Bitboard& board, std::array<int, 2>& kazans, std::array<int, 
       if (value < beta) beta = value;
       if (beta <= alpha) break;
     }
-    tt[tt_idx] = {current_hash, evaluator_key,      value,
-                  depth,        perspective_player, static_cast<uint8_t>(node_best_move)};
+    tt[tt_idx] = {current_hash,
+                  evaluator_key,
+                  value,
+                  depth,
+                  perspective_player,
+                  static_cast<uint8_t>(node_best_move),
+                  bound_flag(value, alpha_orig, beta_orig)};
     return value;
   }
 }
@@ -428,14 +478,21 @@ double minimax_raw_timed(Bitboard& board, std::array<int, 2>& kazans, std::array
                          evaluator);
   }
 
+  const double alpha_orig = alpha, beta_orig = beta;
   uint64_t evaluator_key = evaluator.cache_key();
   int tt_idx = current_hash & (TT_SIZE - 1);
   auto& tt = transposition_table();
   uint8_t tt_best_move = 0;
-  if (tt[tt_idx].hash == current_hash && tt[tt_idx].evaluator_key == evaluator_key &&
-      tt[tt_idx].perspective == perspective_player && tt[tt_idx].depth >= depth) {
+  if (tt_enabled_flag() && tt[tt_idx].hash == current_hash &&
+      tt[tt_idx].evaluator_key == evaluator_key && tt[tt_idx].perspective == perspective_player &&
+      tt[tt_idx].depth >= depth) {
     tt_best_move = tt[tt_idx].best_move;
-    return tt[tt_idx].value;
+    const double stored = tt[tt_idx].value;
+    const uint8_t flag = tt[tt_idx].flag;
+    if (!tt_bound_check_flag() || flag == TT_EXACT) return stored;
+    if (flag == TT_LOWER && stored >= beta) return stored;
+    if (flag == TT_UPPER && stored <= alpha) return stored;
+    // otherwise the entry is only good enough to order moves
   }
 
   if (depth == 0) {
@@ -492,8 +549,13 @@ double minimax_raw_timed(Bitboard& board, std::array<int, 2>& kazans, std::array
       if (beta <= alpha) break;
     }
     if (!timed_out) {
-      tt[tt_idx] = {current_hash, evaluator_key,      value,
-                    depth,        perspective_player, static_cast<uint8_t>(node_best_move)};
+      tt[tt_idx] = {current_hash,
+                    evaluator_key,
+                    value,
+                    depth,
+                    perspective_player,
+                    static_cast<uint8_t>(node_best_move),
+                    bound_flag(value, alpha_orig, beta_orig)};
     }
     return value;
   }
@@ -529,8 +591,13 @@ double minimax_raw_timed(Bitboard& board, std::array<int, 2>& kazans, std::array
     if (beta <= alpha) break;
   }
   if (!timed_out) {
-    tt[tt_idx] = {current_hash, evaluator_key,      value,
-                  depth,        perspective_player, static_cast<uint8_t>(node_best_move)};
+    tt[tt_idx] = {current_hash,
+                  evaluator_key,
+                  value,
+                  depth,
+                  perspective_player,
+                  static_cast<uint8_t>(node_best_move),
+                  bound_flag(value, alpha_orig, beta_orig)};
   }
   return value;
 }

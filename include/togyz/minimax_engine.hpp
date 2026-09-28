@@ -8,6 +8,12 @@
 
 namespace minimax_engine {
 
+// Test hooks: disable the transposition table, or ignore the stored bound kind
+// (the second reproduces the behaviour of the engine before the 2026 bound fix).
+void clear_transposition_table();
+void set_tt_enabled(bool enabled);
+void set_tt_bound_check(bool check);
+
 int move_order_key(const Bitboard& b, int player, int move);
 void sort_moves_in_place(const Bitboard& b, int player, std::array<int, 9>& moves, int count);
 

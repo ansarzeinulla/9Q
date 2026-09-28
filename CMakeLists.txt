@@ -98,6 +98,10 @@ if(NOT EMSCRIPTEN)
     target_link_libraries(test_tt_eviction PRIVATE togyz_core gtest_main)
     add_test(NAME test_tt_eviction COMMAND test_tt_eviction)
 
+    add_executable(test_minimax_tt_bounds tests/test_minimax_tt_bounds.cpp)
+    target_link_libraries(test_minimax_tt_bounds PRIVATE togyz_core gtest_main)
+    add_test(NAME test_minimax_tt_bounds COMMAND test_minimax_tt_bounds)
+
     add_executable(test_evaluation tests/test_evaluation.cpp)
     target_link_libraries(test_evaluation PRIVATE togyz_core gtest_main)
     add_test(NAME test_evaluation COMMAND test_evaluation)
